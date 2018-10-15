@@ -13,5 +13,12 @@ setup(
     author_email="ruzhnikov85@gmail.com",
     license="MIT",
     python_requires='>=3.7.0',
-    description="Crawler of resource ftp.zakupki.gov.ru",
+    install_requires=["asyncio"],
+    description="Crawler of resources from ftp.zakupki.gov.ru",
+    entry_points={
+        "console_scripts": [
+            "gov_crawler=app:run"
+        ]
+    },
+    long_description="""..."""
 )
