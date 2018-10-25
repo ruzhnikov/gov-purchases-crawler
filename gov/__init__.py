@@ -1,4 +1,7 @@
 
 # -*- coding: utf-8 -*-
 
-__version__ = "0.0.1.dev"
+VERSION = (0, 0, 1, "dev")
+
+__version__ = '.'.join(str(x) for x in VERSION)
+
