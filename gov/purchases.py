@@ -14,11 +14,12 @@ _LOOK_FOLDER = "notifications"
 
 
 class Client():
-    def __init__(self, server):
+    def __init__(self, server, download_dir=None):
         self._server = server
         self.log = get_logger(__name__)
         self._is_connected = False
         self._root_folders = []
+        self._download_dir = download_dir
         self._connect()
 
     def _connect(self):
@@ -61,16 +62,30 @@ class Client():
         # идём по списку файлов
         for item in items:
             item_type = item[0][0]
-            if item_type == "d": # directory
+            if item_type == "d":
+
+                # это директория. Вызовём для неё рекурсивно сами себя
                 local_folder = item.pop()
                 self.log.info("Go inside {}".format(local_folder))
                 yield from self._read_folder_with_archives(folder + "/" + local_folder)
                 self.log.info("Leave {}".format(local_folder))
                 self.ftp.cwd("../")
             else:
+
+                # это файл, читаем информацию о нём и возвращаем её
                 file = item.pop()
                 full_file = folder + "/" + file
                 file_size = item[4]
                 yield (full_file, file, file_size)
 
+    def download(self, fpath, fname, download_dir=None):
+        """Скачать файл"""
+
+        if download_dir is None:
+            if self._download_dir is None:
+                raise Exception("There is no folder to download file from ftp")
+            download_dir = self._download_dir
+
+        path_to_download = download_dir + "/" + fname
+        self.ftp.retrbinary("RETR {}".format(fpath), open(path_to_download, "wb").write)
 

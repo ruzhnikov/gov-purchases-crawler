@@ -12,7 +12,7 @@ setup(
     author_email="ruzhnikov85@gmail.com",
     license="MIT",
     python_requires='>=3.7.0',
-    install_requires=["asyncio"],
+    install_requires=["asyncio", "lxml"],
     description="Crawler of resources from ftp.zakupki.gov.ru",
     entry_points={
         "console_scripts": [
