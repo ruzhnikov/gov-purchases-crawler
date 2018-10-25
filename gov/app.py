@@ -5,10 +5,9 @@ import argparse
 from .log import get_logger
 from . import purchases
 
+
 _SERVER = None
 
-# папка в директории региона. Из этой папки будем выкачивать данные
-_NEEDED_FOLDER = "notifications"
 
 def read_args():
     global _SERVER
@@ -29,7 +28,7 @@ def has_archive(file):
     return False
 
 def run():
-    log = get_logger()
+    log = get_logger(__name__)
     log.info("Init work")
     read_args()
 
@@ -42,5 +41,3 @@ def run():
         file_size = finfo[2]
         log.info("File: {}; Size: {}".format(fname, file_size))
 
-if __name__ == "__main__":
-    run()

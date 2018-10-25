@@ -16,7 +16,7 @@ _LOOK_FOLDER = "notifications"
 class Client():
     def __init__(self, server):
         self._server = server
-        self.log = get_logger()
+        self.log = get_logger(__name__)
         self._is_connected = False
         self._root_folders = []
         self._connect()
@@ -31,6 +31,7 @@ class Client():
 
         self._read_root_folders()
         for folder in self._root_folders:
+            self.log.info("Read folder {}".format(folder))
             full_folder = _FTP_ROOT_DIR + "/" + folder + "/" + _LOOK_FOLDER
             yield from self._read_folder_with_archives(full_folder)
 
@@ -64,6 +65,7 @@ class Client():
                 local_folder = item.pop()
                 self.log.info("Go inside {}".format(local_folder))
                 yield from self._read_folder_with_archives(folder + "/" + local_folder)
+                self.log.info("Leave {}".format(local_folder))
                 self.ftp.cwd("../")
             else:
                 file = item.pop()
