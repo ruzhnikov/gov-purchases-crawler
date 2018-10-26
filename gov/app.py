@@ -6,7 +6,7 @@ import os
 from zipfile import ZipFile
 from lxml import etree
 from .log import get_logger
-from . import purchases
+from .purchases import Client
 
 
 _SERVER = None
@@ -35,7 +35,7 @@ def has_archive(finfo):
     return False
 
 
-def read_archive(archive, callback):
+def read_archive(archive, callback_func):
     """
         Читает ZIP-архив, извлекает из него XML-файлы.
         Для каждого прочитанного XML файла запускает callback функцию.
@@ -43,11 +43,12 @@ def read_archive(archive, callback):
 
     with ZipFile(archive, "r") as zip:
         for entry in zip.namelist():
-            if not entry.endswith(".xml"): continue
+            if not entry.endswith(".xml"):
+                continue
             with zip.open(entry, "r") as f:
                 xml = f.read()
 
-            callback(xml)
+            callback_func(xml)
 
 
 def upload_xml(xml):
@@ -58,6 +59,18 @@ def upload_xml(xml):
     # etree.En
 
 
+def handle_file(finfo: tuple):
+    """Работает со скачанным файлом"""
+
+    (fname, file_size) = (finfo[0], finfo[2])
+    log.info("File: {}; Size: {}".format(fname, file_size))
+    local_file = _TMP_FOLDER + "/" + fname
+    read_archive(local_file, callback_func=upload_xml)
+
+    # после работы подчищаем за собой
+    if os.path.isfile(local_file):
+        os.remove(local_file)
+
 
 def run():
     """Главная функция. Запускаемся, читаем данные"""
@@ -66,16 +79,14 @@ def run():
     log.info("Init work")
 
     # подключаемся к FTP-серверу
-    server = purchases.Client(_SERVER, _TMP_FOLDER)
+    server = Client(_SERVER, download_dir=_TMP_FOLDER)
 
     # читаем файлы с архивами на сервере. При необходимости, загружаем себе
     for finfo in server.read():
-        if has_archive(finfo): continue
-        full_file = finfo[0]
-        fname = finfo[1]
-        file_size = finfo[2]
-        log.info("File: {}; Size: {}".format(fname, file_size))
+        if has_archive(finfo):
+            continue
+        (full_file, fname) = (finfo[0], finfo[1])
         server.download(full_file, fname)
-        read_archive(_TMP_FOLDER + "/" + fname, callback=upload_xml)
+        handle_file(finfo)
         break
 

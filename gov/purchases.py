@@ -14,8 +14,10 @@ _LOOK_FOLDER = "notifications"
 
 
 class Client():
-    def __init__(self, server, download_dir=None):
-        self._server = server
+    """Класс для работы с FTP сервером"""
+
+    def __init__(self, server_address, download_dir=None):
+        self._server = server_address
         self.log = get_logger(__name__)
         self._is_connected = False
         self._root_folders = []
@@ -23,6 +25,8 @@ class Client():
         self._connect()
 
     def _connect(self):
+        """Подключение и авторизация на FTP сервере"""
+
         self.ftp = FTP(self._server)
         self.ftp.login(_FTP_LOGIN, _FTP_PASSWORD)
         self._is_connected = True
