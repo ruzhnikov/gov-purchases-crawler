@@ -15,6 +15,8 @@ log = get_logger(__name__)
 
 
 def read_args():
+    """Считывает параментры из командной строки"""
+
     global _SERVER, _TMP_FOLDER
 
     parser = argparse.ArgumentParser()
@@ -26,7 +28,7 @@ def read_args():
         required=True)
     args = parser.parse_args()
     _SERVER = args.server
-    _TMP_FOLDER = args.tmp_folder        
+    _TMP_FOLDER = args.tmp_folder
 
 
 def has_archive(finfo):
@@ -51,16 +53,25 @@ def read_archive(archive, callback_func):
             callback_func(xml)
 
 
+def get_tag(tag):
+    """Возвращает tag, очищенный от неймспейса"""
+
+    return etree.QName(tag).localname
+
+
 def upload_xml(xml):
     """Парсит XML, загружает данные в БД"""
 
     root = etree.fromstring(xml)
-    pass
-    # etree.En
+    for attr in root.iter():
+        for e in attr.iter():
+            if get_tag(e.tag) == "signature":
+                continue
+            pass
 
 
 def handle_file(finfo: tuple):
-    """Работает со скачанным файлом"""
+    """Работа со скачанным файлом"""
 
     (fname, file_size) = (finfo[0], finfo[2])
     log.info("File: {}; Size: {}".format(fname, file_size))
