@@ -16,6 +16,7 @@ _LOOK_FOLDER = "notifications"
 class Client():
     """Класс для работы с FTP сервером"""
 
+
     def __init__(self, server_address, download_dir=None):
         self._server = server_address
         self.log = get_logger(__name__)
@@ -24,12 +25,23 @@ class Client():
         self._download_dir = download_dir
         self._connect()
 
+
     def _connect(self):
         """Подключение и авторизация на FTP сервере"""
 
         self.ftp = FTP(self._server)
         self.ftp.login(_FTP_LOGIN, _FTP_PASSWORD)
         self._is_connected = True
+
+
+    def reconnect(self):
+        """Попытка переподключиться к серверу"""
+
+        self._is_connected = False
+        self._connect()
+
+        return self._is_connected
+
 
     def read(self):
         """Читает файлы в папках, возвращает итератор"""
@@ -40,6 +52,7 @@ class Client():
             full_folder = _FTP_ROOT_DIR + "/" + folder + "/" + _LOOK_FOLDER
             yield from self._read_folder_with_archives(full_folder)
 
+
     def _read_root_folders(self):
         """Получить папки с регионами из корневой директории"""
 
@@ -49,6 +62,7 @@ class Client():
         items = map(str.split, items)
         self._root_folders = [item.pop()
                               for item in items if item[0][0] == 'd']
+
 
     def _read_folder_with_archives(self, folder):
         """
@@ -72,6 +86,8 @@ class Client():
                 local_folder = item.pop()
                 self.log.info("Go inside {}".format(local_folder))
                 yield from self._read_folder_with_archives(folder + "/" + local_folder)
+
+                # После работы нужно вернуться в предыдущую папку
                 self.log.info("Leave {}".format(local_folder))
                 self.ftp.cwd("../")
             else:
@@ -82,12 +98,14 @@ class Client():
                 file_size = item[4]
                 yield (full_file, file, file_size)
 
+
     def download(self, fpath, fname, download_dir=None):
         """Скачать файл"""
 
         if download_dir is None:
             if self._download_dir is None:
-                raise Exception("There is no folder to download file from ftp")
+                raise Exception(
+                    "There is no folder to download file from ftp")
             download_dir = self._download_dir
 
         path_to_download = download_dir + "/" + fname
