@@ -9,6 +9,12 @@ log = get_logger(__name__)
 
 
 def purchase_number(elem, return_in_dict=False):
+    """Обработчик для поля purchaseNumber
+
+    Args:
+        elem (lxml.etree.ElementBase): элемент структуры
+        return_in_dict (bool, optional): Defaults to False. Не записывать данные в БД, просто вернуть в словаре
+    """
     log.info("Handle {}".format(get_tag(elem.tag)))
     for e in elem.iter():
         log.info("{} => {}".format(get_tag(e.tag), e.text))

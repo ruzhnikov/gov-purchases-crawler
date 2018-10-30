@@ -33,11 +33,10 @@ def read_args():
 
     parser = argparse.ArgumentParser()
     requiredNamed = parser.add_argument_group('required named arguments')
-    requiredNamed.add_argument("-s", "--server", type=str,
-                            help="Server address", required=True)
-    requiredNamed.add_argument(
-        "-t", "--tmp_folder", type=str, help="Temporary folder for archives",
-        required=True)
+    requiredNamed.add_argument("-s", "--server", type=str, help="Server address", required=True)
+    requiredNamed.add_argument("-t", "--tmp_folder", type=str,
+                               help="Temporary folder for archives",
+                               required=True)
     args = parser.parse_args()
     _SERVER = args.server
     _TMP_FOLDER = args.tmp_folder
@@ -66,7 +65,7 @@ def read_archive(archive, callback_func):
 
 
 def upload_xml(xml):
-    """Парсит XML, загружает данные в БД"""
+    """Парсит XML, вызывает обработчики полей структуры XML"""
 
     root = etree.fromstring(xml)
     for attr in root.iter():
@@ -75,14 +74,17 @@ def upload_xml(xml):
             if tag_name in _XML_FIELDS:
                 handler = _XML_FIELDS[tag_name]
                 if not callable(handler):
-                    log.warning(
-                        "The handler of key {} is not callable and will be skipped".format(tag_name))
+                    log.warning("The handler of key {} is not callable and will be skipped".format(tag_name))
                     continue
                 handler(elem)
 
 
 def handle_file(finfo: tuple):
-    """Работа со скачанным файлом"""
+    """Работа со скачанным файлом
+
+    Args:
+        finfo (tuple): кортеж с данными о файле
+    """
 
     (fname, file_size) = (finfo[1], finfo[2])
     log.info("File: {}; Size: {}".format(fname, file_size))
@@ -116,4 +118,3 @@ def run():
 
         if count >= 15:
             break
-

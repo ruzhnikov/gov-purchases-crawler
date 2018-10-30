@@ -16,7 +16,6 @@ _LOOK_FOLDER = "notifications"
 class Client():
     """Класс для работы с FTP сервером"""
 
-
     def __init__(self, server_address, download_dir=None):
         self._server = server_address
         self.log = get_logger(__name__)
@@ -25,14 +24,12 @@ class Client():
         self._download_dir = download_dir
         self._connect()
 
-
     def _connect(self):
         """Подключение и авторизация на FTP сервере"""
 
         self.ftp = FTP(self._server)
         self.ftp.login(_FTP_LOGIN, _FTP_PASSWORD)
         self._is_connected = True
-
 
     def reconnect(self):
         """Попытка переподключиться к серверу"""
@@ -42,7 +39,6 @@ class Client():
 
         return self._is_connected
 
-
     def read(self):
         """Читает файлы в папках, возвращает итератор"""
 
@@ -51,7 +47,6 @@ class Client():
             self.log.info("Read folder {}".format(folder))
             full_folder = _FTP_ROOT_DIR + "/" + folder + "/" + _LOOK_FOLDER
             yield from self._read_folder_with_archives(full_folder)
-
 
     def _read_root_folders(self):
         """Получить папки с регионами из корневой директории"""
@@ -63,11 +58,12 @@ class Client():
         self._root_folders = [item.pop()
                               for item in items if item[0][0] == 'd']
 
-
     def _read_folder_with_archives(self, folder):
-        """
-            Прочитать файлы из указанной папки.
-            Вложенные папки также будут прочитаны. Возвращает итератор
+        """Прочитать файлы из указанной папки.
+        Вложенные папки также будут прочитаны. Возвращает итератор
+
+        Args:
+            folder (str): имя папки
         """
 
         # для начала читаем папку
@@ -98,16 +94,22 @@ class Client():
                 file_size = item[4]
                 yield (full_file, file, file_size)
 
-
     def download(self, fpath, fname, download_dir=None):
-        """Скачать файл"""
+        """Скачать файл
+
+        Args:
+            fpath (str): Файл на сервере с указанием абсолютного пути до него
+            fname (str): Имя файла
+            download_dir (str, optional): Defaults to None. Диретория для скачивания
+
+        Raises:
+            Exception: ...
+        """
 
         if download_dir is None:
             if self._download_dir is None:
-                raise Exception(
-                    "There is no folder to download file from ftp")
+                raise Exception("There is no folder to download file from ftp")
             download_dir = self._download_dir
 
         path_to_download = download_dir + "/" + fname
         self.ftp.retrbinary("RETR {}".format(fpath), open(path_to_download, "wb").write)
-

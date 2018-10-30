@@ -1,6 +1,6 @@
 # NAME
 
-    gov-zakupki-crowler
+    gov-purchases-crawler
 
 ## DESCRIPTION
 
