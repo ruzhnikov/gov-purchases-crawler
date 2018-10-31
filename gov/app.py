@@ -3,27 +3,15 @@
 
 import argparse
 import os
-from zipfile import ZipFile
-from lxml import etree
 from .log import get_logger
 from .purchases import Client
-from .utils import get_tag
-from . import handlers as h
+from .law.readers import FortyFourthLaw
 
 
 _SERVER = None
 _TMP_FOLDER = None
 log = get_logger(__name__)
-
-# задаём поля, которые мы хотим брать из XML файла, так же обработчики для этих полей
-_XML_FIELDS = {
-    "purchaseNumber": h.purchase_number,
-    "placingWay": h.placing_way,
-    "purchaseResponsible": h.purchase_responsible,
-    "ETP": h.etp,
-    "procedureInfo": h.procedure_info,
-    "lot": h.lot
-}
+ffl = FortyFourthLaw()
 
 
 def read_args():
@@ -48,39 +36,9 @@ def has_archive(finfo):
     return False
 
 
-def read_archive(archive, callback_func):
-    """
-        Читает ZIP-архив, извлекает из него XML-файлы.
-        Для каждого прочитанного XML файла запускает callback функцию.
-    """
-
-    with ZipFile(archive, "r") as zip:
-        for entry in zip.namelist():
-            if not entry.endswith(".xml"):
-                continue
-            with zip.open(entry, "r") as f:
-                xml = f.read()
-
-            callback_func(xml)
-
-
-def upload_xml(xml):
-    """Парсит XML, вызывает обработчики полей структуры XML"""
-
-    root = etree.fromstring(xml)
-    for attr in root.iter():
-        for elem in attr.iter():
-            tag_name = get_tag(elem.tag)
-            if tag_name in _XML_FIELDS:
-                handler = _XML_FIELDS[tag_name]
-                if not callable(handler):
-                    log.warning("The handler of key {} is not callable and will be skipped".format(tag_name))
-                    continue
-                handler(elem)
-
-
 def handle_file(finfo: tuple):
-    """Работа со скачанным файлом
+    """Работа со скачанным файлом.
+    После обработки файл удаляется
 
     Args:
         finfo (tuple): кортеж с данными о файле
@@ -88,13 +46,13 @@ def handle_file(finfo: tuple):
 
     (fname, file_size) = (finfo[1], finfo[2])
     log.info("File: {}; Size: {}".format(fname, file_size))
-    local_file = _TMP_FOLDER + "/" + fname
-    read_archive(local_file, callback_func=upload_xml)
+    zip_file = _TMP_FOLDER + "/" + fname
+    ffl.handle_archive(zip_file)
 
     # после работы подчищаем за собой
-    if os.path.isfile(local_file):
-        log.info("Remove file {}".format(local_file))
-        os.remove(local_file)
+    if os.path.isfile(zip_file):
+        log.info("Remove file {}".format(zip_file))
+        os.remove(zip_file)
 
 
 def run():
