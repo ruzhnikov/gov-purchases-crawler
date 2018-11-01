@@ -30,18 +30,24 @@ def read_args():
     _TMP_FOLDER = args.tmp_folder
 
 
-def has_archive(finfo):
-    """Проверяет, нет ли у нас уже информации об этом файле"""
+def has_archive(finfo: tuple):
+    """Проверяет, нет ли у нас уже информации об этом файле
+
+    Args:
+        finfo (tuple): Кортеж с данными о файле.
+
+    Returns:
+        bool: Результат проверки.
+    """
 
     return False
 
 
 def handle_file(finfo: tuple):
-    """Работа со скачанным файлом.
-    После обработки файл удаляется
+    """Работа со скачанным файлом. После обработки файл удаляется
 
     Args:
-        finfo (tuple): кортеж с данными о файле
+        finfo (tuple): Кортеж с данными о файле.
     """
 
     (fname, file_size) = (finfo[1], finfo[2])

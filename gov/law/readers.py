@@ -8,6 +8,7 @@ from zipfile import ZipFile
 from lxml import etree
 from ..log import get_logger
 from ..utils import get_tag
+from ..errors import WrongReaderLawError
 
 
 _FORTY_FORTH_LAW = 44
@@ -16,21 +17,22 @@ _AVAIL_LAWS = (_FORTY_FORTH_LAW,)
 
 class _CommonHandler():
     """Класс с обработчиками для полей XML структур
-    
+
     Raises:
-        Exception: ...
+        WrongReaderLawError: если law не находится в списке _AVAIL_LAWS
     """
+
     def __init__(self, law):
         self.log = get_logger(__name__)
         if law not in _AVAIL_LAWS:
-            raise Exception("Wrong law {}".format(law))
+            raise WrongReaderLawError(law)
         self._law = law
 
     def purchase_number(self, elem, return_in_dict=False):
         """Обработчик для поля purchaseNumber
 
         Args:
-            elem (lxml.etree.ElementBase): элемент структуры
+            elem (lxml.etree.ElementBase): элемент XML структуры
             return_in_dict (bool, optional): Defaults to False. Не записывать данные в БД, просто вернуть в словаре
         """
         self.log.info("Handle {}".format(get_tag(elem.tag)))
@@ -85,6 +87,11 @@ class FortyFourthLaw():
         }
 
     def handle_archive(self, archive):
+        """Обработка архива. Чтение, парсинг и запись в БД
+
+        Args:
+            archive (str): имя файла с архивом
+        """
         for xml in self._read_archive(archive):
             self._parse_and_upload_xml(xml)
 
@@ -102,10 +109,13 @@ class FortyFourthLaw():
                     handler(elem)
 
     def _read_archive(self, archive):
-        """Чтение архива
+        """Чтение архива. Возвращает генератор
 
         Args:
-            archive (str): Файл с архивом
+            archive (str): Файл с архивом.
+
+        Yields:
+            bytes: Данные из прочитанного XML файла.
         """
         with ZipFile(archive, "r") as zip:
             for entry in zip.namelist():

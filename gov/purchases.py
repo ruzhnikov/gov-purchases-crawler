@@ -3,6 +3,7 @@
 
 from ftplib import FTP
 from .log import get_logger
+from .errors import EmptyDownloadDirError
 
 
 _FTP_LOGIN = "free"
@@ -103,12 +104,12 @@ class Client():
             download_dir (str, optional): Defaults to None. Диретория для скачивания
 
         Raises:
-            Exception: ...
+            EmptyDownloadDirError: Отсутствует папка для скачивания файла.
         """
 
         if download_dir is None:
             if self._download_dir is None:
-                raise Exception("There is no folder to download file from ftp")
+                raise EmptyDownloadDirError
             download_dir = self._download_dir
 
         path_to_download = download_dir + "/" + fname
