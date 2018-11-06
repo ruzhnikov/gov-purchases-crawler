@@ -2,10 +2,15 @@
 # -*- coding: utf-8 -*-
 
 import os
+import argparse
 from .errors import LostConfigFieldError
 
 
-_CONFIG = {}
+_CONFIG = {
+    "__parsed_env": False,
+    "__parsed_args": False,
+    "__checked": False
+}
 
 
 class _BaseConfig():
@@ -15,7 +20,7 @@ class _BaseConfig():
     _CFG = {}
 
     def __init__(self):
-        _read_env()
+        _read_config()
         self._CFG = _CONFIG[self._PREFIX]
 
 
@@ -23,6 +28,7 @@ class DBConfig(_BaseConfig):
     """Класс для работы с конфигурацией базы данных.
     """
     _FIELDS = ("HOST", "USER", "PASSWORD", "NAME")
+    _REQUIRED = _FIELDS
     _PREFIX = "DB"
 
     @property
@@ -43,33 +49,95 @@ class DBConfig(_BaseConfig):
 
 
 class AppConfig(_BaseConfig):
-    _FIELDS = ("MODE",)
-    _REQUIRED = ()
+    _FIELDS = ("MODE", "FTP_SERVER", "TMP_FOLDER")
+    _REQUIRED = ("FTP_SERVER", "TMP_FOLDER")
     _PREFIX = "APP"
-    _CFG = {"mode": "prod"}
     __avail_mode = ("dev", "prod")
 
     def __init__(self):
         super().__init__()
         if "mode" not in self._CFG or self._CFG["mode"] not in self.__avail_mode:
             self._CFG["mode"] = "prod"
+        self.log = self.LogConfig()
+        if self.mode == "dev":
+            self.log._CFG["level"] = "DEBUG"
 
     @property
     def mode(self):
         return str.lower(self._CFG["mode"])
 
+    @property
+    def ftp_server(self):
+        return self._CFG["ftp_server"]
+
+    @property
+    def tmp_folder(self):
+        return self._CFG["tmp_folder"]
+
+    class LogConfig(_BaseConfig):
+        _FIELDS = ("LEVEL")
+        _PREFIX = "APP_LOG"
+        __default_level = "INFO"
+
+        def __init__(self):
+            super().__init__()
+            if "level" not in self._CFG:
+                self._CFG["level"] = self.__default_level
+
+        @property
+        def level(self):
+            return self._CFG["level"]
+
+
+def _read_config():
+    _read_env()
+    _read_args()
+    _check_config()
+
 
 def _read_env():
-    if len(_CONFIG) > 0:
+    if _CONFIG["__parsed_env"]:
         return
 
     # идём по полям классов, читаём данные из ENV
-    for cls in (DBConfig, AppConfig):
+    for cls in (DBConfig, AppConfig, AppConfig.LogConfig):
         for field in cls._FIELDS:
             env_field = cls._PREFIX + "_" + field
-            if env_field not in os.environ and field in cls._REQUIRED:
-                raise LostConfigFieldError(env_field)
             cfg_key = cls._PREFIX
             if cfg_key not in _CONFIG:
                 _CONFIG[cfg_key] = {}
+            if env_field not in os.environ:
+                continue
             _CONFIG[cfg_key][field.lower()] = os.environ.get(env_field)
+    _CONFIG["__parsed_env"] = True
+
+
+def _read_args():
+    if _CONFIG["__parsed_args"]:
+        return
+
+    parser = argparse.ArgumentParser()
+    requiredNamed = parser.add_argument_group('required named arguments')
+    requiredNamed.add_argument("-s", "--server", type=str, help="FTP server address", required=True)
+    requiredNamed.add_argument("-t", "--tmp_folder", type=str,
+                               help="Temporary folder for archives",
+                               required=True)
+    args = parser.parse_args()
+
+    _CONFIG[AppConfig._PREFIX]["ftp_server"] = args.server
+    _CONFIG[AppConfig._PREFIX]["tmp_folder"] = args.tmp_folder
+    _CONFIG["__parsed_args"] = True
+
+
+def _check_config():
+    if _CONFIG["__checked"]:
+        return
+
+    for cls in (DBConfig, AppConfig, AppConfig.LogConfig):
+        for field in cls._REQUIRED:
+            lower_field = str.lower(field)
+            env_field = cls._PREFIX + "_" + field
+            if lower_field not in _CONFIG[cls._PREFIX] or _CONFIG[cls._PREFIX][lower_field] is None:
+                raise LostConfigFieldError(env_field)
+
+    _CONFIG["__checked"] = True

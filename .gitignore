@@ -8,3 +8,4 @@ tmp
 *.txt
 db.py
 env.inc
+docker

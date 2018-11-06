@@ -1,58 +1,61 @@
 
 # -*- coding: utf-8 -*-
 
-import argparse
 import os
 from .log import get_logger
 from .purchases import Client
+from .db import DBClient
 from .law.readers import FortyFourthLaw
+from .config import AppConfig
 
 
-_SERVER = None
-_TMP_FOLDER = None
 log = get_logger(__name__)
+db = DBClient()
 ffl = FortyFourthLaw()
+cfg = AppConfig()
 
 
-def read_args():
-    """Считывает параментры из командной строки"""
+def convert_finfo_to_dict(finfo: tuple) -> dict:
+    """[summary]
 
-    global _SERVER, _TMP_FOLDER
+    Args:
+        finfo (tuple): [description]
 
-    parser = argparse.ArgumentParser()
-    requiredNamed = parser.add_argument_group('required named arguments')
-    requiredNamed.add_argument("-s", "--server", type=str, help="Server address", required=True)
-    requiredNamed.add_argument("-t", "--tmp_folder", type=str,
-                               help="Temporary folder for archives",
-                               required=True)
-    args = parser.parse_args()
-    _SERVER = args.server
-    _TMP_FOLDER = args.tmp_folder
+    Returns:
+        dict: [description]
+    """
+    finfo_dict = {
+        "full_file": finfo[0],
+        "fname": finfo[1],
+        "fsize": int(finfo[2])
+    }
+
+    return finfo_dict
 
 
-def has_archive(finfo: tuple):
+def has_archive(finfo: dict) -> bool:
     """Проверяет, нет ли у нас уже информации об этом файле
 
     Args:
-        finfo (tuple): Кортеж с данными о файле.
+        finfo (dict): Кортеж с данными о файле.
 
     Returns:
         bool: Результат проверки.
     """
 
-    return False
+    has_data_in_db = db.has_parsed_archive(finfo["full_file"], finfo["fname"], finfo["fsize"])
+    return has_data_in_db
 
 
-def handle_file(finfo: tuple):
+def handle_file(finfo: dict):
     """Работа со скачанным файлом. После обработки файл удаляется
 
     Args:
-        finfo (tuple): Кортеж с данными о файле.
+        finfo (dict): Кортеж с данными о файле.
     """
 
-    (fname, file_size) = (finfo[1], finfo[2])
-    log.info("File: {}; Size: {}".format(fname, file_size))
-    zip_file = _TMP_FOLDER + "/" + fname
+    log.info("File: {}; Size: {}".format(finfo["fname"], finfo["fsize"]))
+    zip_file = cfg.tmp_folder + "/" + finfo["fname"]
     ffl.handle_archive(zip_file)
 
     # после работы подчищаем за собой
@@ -64,21 +67,21 @@ def handle_file(finfo: tuple):
 def run():
     """Главная функция. Запускаемся, читаем данные"""
 
-    read_args()
     log.info("Init work")
 
     # подключаемся к FTP-серверу
-    server = Client(_SERVER, download_dir=_TMP_FOLDER)
+    server = Client(cfg.ftp_server, download_dir=cfg.tmp_folder)
 
-    count = 0
+    count = 0  # FIXME: только для тестов
     # читаем файлы с архивами на сервере. При необходимости, загружаем себе
     for finfo in server.read():
-        if has_archive(finfo):
+        finfo_dict = convert_finfo_to_dict(finfo)
+        if has_archive(finfo_dict):
             continue
-        count += 1
-        (full_file, fname) = (finfo[0], finfo[1])
-        server.download(full_file, fname)
+        count += 1  # FIXME: только для тестов
+        server.download(finfo_dict["full_file"], finfo_dict["fname"])
         handle_file(finfo)
 
+        # FIXME: только для тестов
         if count >= 15:
             break
