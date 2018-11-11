@@ -45,7 +45,7 @@ class Client():
 
         self._read_root_folders()
         for folder in self._root_folders:
-            self.log.info("Read folder {}".format(folder))
+            self.log.info(f"Read folder {folder}")
             full_folder = _FTP_ROOT_DIR + "/" + folder + "/" + _LOOK_FOLDER
             yield from self._read_folder_with_archives(full_folder)
 
@@ -69,7 +69,7 @@ class Client():
 
         # для начала читаем папку
         self.ftp.cwd(folder)
-        self.log.info("Read files of directory {}".format(folder))
+        self.log.info(f"Read files of directory {folder}")
         items = []
         self.ftp.retrlines("LIST", items.append)
         items = map(str.split, items)
@@ -81,11 +81,11 @@ class Client():
 
                 # это директория. Вызовём для неё рекурсивно сами себя
                 local_folder = item.pop()
-                self.log.info("Go inside {}".format(local_folder))
+                self.log.info(f"Go inside {local_folder}")
                 yield from self._read_folder_with_archives(folder + "/" + local_folder)
 
                 # После работы нужно вернуться в предыдущую папку
-                self.log.info("Leave {}".format(local_folder))
+                self.log.info(f"Leave {local_folder}")
                 self.ftp.cwd("../")
             else:
 
@@ -113,4 +113,4 @@ class Client():
             download_dir = self._download_dir
 
         path_to_download = download_dir + "/" + fname
-        self.ftp.retrbinary("RETR {}".format(fpath), open(path_to_download, "wb").write)
+        self.ftp.retrbinary(f"RETR {fpath}", open(path_to_download, "wb").write)

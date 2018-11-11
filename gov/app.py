@@ -15,6 +15,9 @@ ffl = FortyFourthLaw()
 cfg = AppConfig()
 
 
+_NEED_TO_UPDATE_ARCHIVE = False
+
+
 def convert_finfo_to_dict(finfo: tuple) -> dict:
     """[summary]
 
@@ -34,20 +37,32 @@ def convert_finfo_to_dict(finfo: tuple) -> dict:
 
 
 def has_archive(finfo: dict) -> bool:
-    """Проверяет, нет ли у нас уже информации об этом файле
+    """Проверяет, нет ли у нас уже информации об этом архиве.
 
     Args:
-        finfo (dict): Кортеж с данными о файле.
+        finfo (dict): Словарь с данными об архиве.
 
     Returns:
         bool: Результат проверки.
     """
 
-    has_data_in_db = db.has_parsed_archive(finfo["full_file"], finfo["fname"], finfo["fsize"])
-    return has_data_in_db
+    _NEED_TO_UPDATE_ARCHIVE = False
+    arch_status = db.get_archive_status(finfo["full_name"], finfo["fname"], finfo["fsize"])
+    if arch_status == db.FILE_STATUS["FILE_EXISTS"]:
+        return True
+    elif arch_status == db.FILE_STATUS["FILE_DOES_NOT_EXIST"]:
+        return False
+    elif arch_status in (db.FILE_STATUS["FILE_EXISTS_BUT_NOT_PARSED"],
+                         db.FILE_STATUS["FILE_EXISTS_BUT_SIZE_DIFFERENT"]):
+        _NEED_TO_UPDATE_ARCHIVE = True
+        return True
 
 
-def handle_file(finfo: dict):
+def need_to_update_archive():
+    return _NEED_TO_UPDATE_ARCHIVE
+
+
+def handle_archive(finfo: dict):
     """Работа со скачанным файлом. После обработки файл удаляется
 
     Args:
@@ -64,6 +79,10 @@ def handle_file(finfo: dict):
         os.remove(zip_file)
 
 
+def update_archive(finfo: dict):
+    pass
+
+
 def run():
     """Главная функция. Запускаемся, читаем данные"""
 
@@ -74,13 +93,19 @@ def run():
 
     count = 0  # FIXME: только для тестов
     # читаем файлы с архивами на сервере. При необходимости, загружаем себе
-    for finfo in server.read():
-        finfo_dict = convert_finfo_to_dict(finfo)
-        if has_archive(finfo_dict):
+    for f in server.read():
+        fdict = convert_finfo_to_dict(f)
+        if has_archive(fdict):
+            if need_to_update_archive():
+                server.download(fdict["full_file"], fdict["fname"])
+                update_archive(fdict)
             continue
         count += 1  # FIXME: только для тестов
-        server.download(finfo_dict["full_file"], finfo_dict["fname"])
-        handle_file(finfo)
+
+        # Скачиваем файл и сохраняем информацию о нём в БД. Далее, читаем его.
+        server.download(fdict["full_file"], fdict["fname"])
+        fdict["archive_id"] = db.add_archive(fdict["full_file"], fdict["fname"], fdict["fsize"])
+        handle_archive(fdict)
 
         # FIXME: только для тестов
         if count >= 15:
