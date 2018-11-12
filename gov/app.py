@@ -71,7 +71,7 @@ def handle_archive(finfo: dict):
 
     log.info("File: {}; Size: {}".format(finfo["fname"], finfo["fsize"]))
     zip_file = cfg.tmp_folder + "/" + finfo["fname"]
-    ffl.handle_archive(zip_file)
+    ffl.handle_archive(zip_file, finfo["archive_id"])
 
     # после работы подчищаем за собой
     if os.path.isfile(zip_file):
