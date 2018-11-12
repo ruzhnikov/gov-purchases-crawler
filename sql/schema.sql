@@ -15,7 +15,7 @@ DROP TABLE IF EXISTS archive_files;
 CREATE TABLE archive_files (
     id SERIAL PRIMARY KEY,
     archive_id INT REFERENCES archives (id),
-    name VARCHAR (250) NOT NULL,
+    name VARCHAR(250) NOT NULL,
     size INT NOT NULL,
     parsed_on TIMESTAMP WITHOUT TIME ZONE DEFAULT NULL,
     has_parsed BOOLEAN NOT NULL DEFAULT FALSE
