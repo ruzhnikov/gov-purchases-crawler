@@ -95,6 +95,7 @@ class FortyFourthLaw():
         Args:
             archive (str): Имя файла с архивом.
         """
+
         for xml, file_info in self._read_archive(archive, archive_id):
             self._parse_and_upload_xml(xml, file_info)
 
@@ -107,7 +108,7 @@ class FortyFourthLaw():
                 if tag_name in self.__HANDLERS:
                     handler = self.__HANDLERS[tag_name]
                     if not callable(handler):
-                        self.log.warning("The handler of key {} is not callable and will be skipped".format(tag_name))
+                        self.log.warning(f"The handler of key {tag_name} is not callable and will be skipped")
                         continue
                     handler(elem)
 

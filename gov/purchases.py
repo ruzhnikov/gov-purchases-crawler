@@ -93,7 +93,11 @@ class Client():
                 file = item.pop()
                 full_file = folder + "/" + file
                 file_size = item[4]
-                yield (full_file, file, file_size)
+                yield {
+                    "full_file": full_file,
+                    "fname": file,
+                    "fsize": int(file_size)
+                }
 
     def download(self, fpath, fname, download_dir=None):
         """Скачать файл

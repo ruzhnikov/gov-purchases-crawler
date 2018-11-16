@@ -9,104 +9,110 @@ from .law.readers import FortyFourthLaw
 from .config import AppConfig
 
 
-log = get_logger(__name__)
-db = DBClient()
-ffl = FortyFourthLaw()
-cfg = AppConfig()
+class _Application():
 
+    def __init__(self):
+        self.log = get_logger(__name__)
+        self.db = DBClient()
+        self.ffl = FortyFourthLaw()
+        self.cfg = AppConfig()
+        self._archives = {}
 
-_NEED_TO_UPDATE_ARCHIVE = False
+    def _has_archive(self, finfo: dict) -> bool:
+        """Проверяет, нет ли у нас уже информации об этом архиве.
 
+        Args:
+            finfo (dict): Словарь с данными об архиве.
 
-def convert_finfo_to_dict(finfo: tuple) -> dict:
-    """[summary]
+        Returns:
+            bool: Результат проверки.
+        """
 
-    Args:
-        finfo (tuple): [description]
+        self._archives[finfo["full_name"]] = {"need_to_update": False}
+        archive = self._archives[finfo["full_name"]]
 
-    Returns:
-        dict: [description]
-    """
-    finfo_dict = {
-        "full_file": finfo[0],
-        "fname": finfo[1],
-        "fsize": int(finfo[2])
-    }
+        # Смотрим, что у нас в БД по этому файлу. Может быть ситуация, что файл в БД имеется и он
+        # был прочитан и распарсен, но метаданные между ним и файлом с FTP сервера отличаются.
+        # В таком случае нам нужно обновить данные в БД.
+        arch_status = self.db.get_archive_status(finfo["full_name"], finfo["fname"], finfo["fsize"])
+        if arch_status == self.db.FILE_STATUS["FILE_EXISTS"]:
+            return True
+        elif arch_status == self.db.FILE_STATUS["FILE_DOES_NOT_EXIST"]:
+            return False
+        elif arch_status in (self.db.FILE_STATUS["FILE_EXISTS_BUT_NOT_PARSED"],
+                             self.db.FILE_STATUS["FILE_EXISTS_BUT_SIZE_DIFFERENT"]):
+            archive["need_to_update"] = True
+            return True
 
-    return finfo_dict
-
-
-def has_archive(finfo: dict) -> bool:
-    """Проверяет, нет ли у нас уже информации об этом архиве.
-
-    Args:
-        finfo (dict): Словарь с данными об архиве.
-
-    Returns:
-        bool: Результат проверки.
-    """
-
-    _NEED_TO_UPDATE_ARCHIVE = False
-    arch_status = db.get_archive_status(finfo["full_name"], finfo["fname"], finfo["fsize"])
-    if arch_status == db.FILE_STATUS["FILE_EXISTS"]:
-        return True
-    elif arch_status == db.FILE_STATUS["FILE_DOES_NOT_EXIST"]:
         return False
-    elif arch_status in (db.FILE_STATUS["FILE_EXISTS_BUT_NOT_PARSED"],
-                         db.FILE_STATUS["FILE_EXISTS_BUT_SIZE_DIFFERENT"]):
-        _NEED_TO_UPDATE_ARCHIVE = True
-        return True
 
+    def _need_to_update_archive(self, finfo: dict) -> bool:
+        """Проверяет, нужно ли нам обновить информацию об архиве.
 
-def need_to_update_archive():
-    return _NEED_TO_UPDATE_ARCHIVE
+        Args:
+            finfo (dict): Словарь с данными об архиве.
 
+        Returns:
+            bool: Результат проверки.
+        """
+        if finfo["full_name"] not in self._archives:
+            self.log.warn(f"There is no information about archive {finfo} inside me")
+            return False
 
-def handle_archive(finfo: dict):
-    """Работа со скачанным файлом. После обработки файл удаляется
+        archive = self._archives[finfo["full_name"]]
+        return archive["need_to_update"]
 
-    Args:
-        finfo (dict): Кортеж с данными о файле.
-    """
+    def _handle_archive(self, finfo: dict):
+        """Работа со скачанным файлом. После обработки файл удаляется
 
-    log.info("File: {}; Size: {}".format(finfo["fname"], finfo["fsize"]))
-    zip_file = cfg.tmp_folder + "/" + finfo["fname"]
-    ffl.handle_archive(zip_file, finfo["archive_id"])
+        Args:
+            finfo (dict): Кортеж с данными о файле.
+        """
 
-    # после работы подчищаем за собой
-    if os.path.isfile(zip_file):
-        log.info("Remove file {}".format(zip_file))
-        os.remove(zip_file)
+        self.log.info(f"File: {finfo['fname']}; Size: {finfo['fsize']}")
+        zip_file = self.cfg.tmp_folder + "/" + finfo["fname"]
+        self.ffl.handle_archive(zip_file, finfo["id"])
 
+        # после работы подчищаем за собой
+        if os.path.isfile(zip_file):
+            self.log.debug(f"Remove file {zip_file}")
+            os.remove(zip_file)
 
-def update_archive(finfo: dict):
-    pass
+            self.log.debug("Clean archive info")
+            if finfo["full_name"] in self._archives:
+                del self._archives[finfo["full_name"]]
+
+    def _update_archive(self, finfo: dict):
+        pass
+
+    def run(self):
+        """Главная функция. Запускаемся, читаем данные"""
+
+        server = Client(self.cfg.ftp_server, download_dir=self.cfg.tmp_folder)
+
+        count = 0  # FIXME: только для тестов
+        for fdict in server.read():
+            count += 1  # FIXME: только для тестов
+            if self._has_archive(fdict):
+                if self._need_to_update_archive(fdict):
+                    server.download(fdict["full_file"], fdict["fname"])
+                    self._update_archive(fdict)
+                continue
+
+            server.download(fdict["full_file"], fdict["fname"])
+            fdict["id"] = self.db.add_archive(fdict["full_file"], fdict["fname"], fdict["fsize"])
+            self._handle_archive(fdict)
+
+            # FIXME: только для тестов
+            if count >= 15:
+                break
 
 
 def run():
-    """Главная функция. Запускаемся, читаем данные"""
-
+    log = get_logger(__name__)
     log.info("Init work")
+    log.debug("Create instance of Application")
 
-    # подключаемся к FTP-серверу
-    server = Client(cfg.ftp_server, download_dir=cfg.tmp_folder)
-
-    count = 0  # FIXME: только для тестов
-    # читаем файлы с архивами на сервере. При необходимости, загружаем себе
-    for f in server.read():
-        fdict = convert_finfo_to_dict(f)
-        if has_archive(fdict):
-            if need_to_update_archive():
-                server.download(fdict["full_file"], fdict["fname"])
-                update_archive(fdict)
-            continue
-        count += 1  # FIXME: только для тестов
-
-        # Скачиваем файл и сохраняем информацию о нём в БД. Далее, читаем его.
-        server.download(fdict["full_file"], fdict["fname"])
-        fdict["archive_id"] = db.add_archive(fdict["full_file"], fdict["fname"], fdict["fsize"])
-        handle_archive(fdict)
-
-        # FIXME: только для тестов
-        if count >= 15:
-            break
+    app = _Application()
+    log.debug("Run")
+    app.run()

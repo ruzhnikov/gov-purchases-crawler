@@ -16,7 +16,7 @@ setup(
     description="Crawler of resources from ftp.zakupki.gov.ru",
     entry_points={
         "console_scripts": [
-            "gov_crawler=gov.app:run"
+            "gov-purchases=gov.app:run"
         ]
     },
     long_description="""..."""
