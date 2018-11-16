@@ -11,7 +11,7 @@ from .config import DBConfig, AppConfig
 
 
 class DBClient():
-    """Реализация DBInterface для ClickHouse
+    """Интерфейс для работы с базой данных.
     """
 
     FILE_STATUS = {
@@ -28,11 +28,23 @@ class DBClient():
         self._connect()
 
     def _connect(self):
+        """Подключиться к БД
+        """
+
         cfg = self._db_cfg
-        conn_str = f"postgresql+psycopg2://{cfg.user}:{cfg.password}@{cfg.host}/{cfg.name}"
+        conn_str = f"postgresql://{cfg.user}:{cfg.password}@{cfg.host}/{cfg.name}"
         engine_echo = True if self._app_cfg.mode == "dev" else False
         engine = sa.create_engine(conn_str, echo=engine_echo)
         self.session = sessionmaker(bind=engine)
+        self._check_connection()
+
+    def _check_connection(self):
+        """Проверить коннект к базе
+        """
+
+        sess = self.session()
+        sess.execute("SELECT TRUE")
+        sess.close()
 
     def get_archive_status(self, full_fname: str, fname: str, fsize: int):
         """Проверяет, есть ли в БД уже распарсенный файл или нет.
@@ -106,6 +118,7 @@ class DBClient():
         sess.commit()
 
     def has_parsed_archive_file(self, archive_id: int, fname: str, fsize: int) -> bool:
+        # TODO: подумать, что делать с файлом, который уже был распрасен и который изменился на сервере
         return False
 
     def get_archive_file_status(self, archive_id, fname, fsize):
