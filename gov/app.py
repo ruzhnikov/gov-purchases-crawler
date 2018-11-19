@@ -95,16 +95,16 @@ class _Application():
             count += 1  # FIXME: только для тестов
             if self._has_archive(fdict):
                 if self._need_to_update_archive(fdict):
-                    server.download(fdict["full_file"], fdict["fname"])
+                    server.download(fdict["full_name"], fdict["fname"])
                     self._update_archive(fdict)
                 continue
 
-            server.download(fdict["full_file"], fdict["fname"])
-            fdict["id"] = self.db.add_archive(fdict["full_file"], fdict["fname"], fdict["fsize"])
+            server.download(fdict["full_name"], fdict["fname"])
+            fdict["id"] = self.db.add_archive(fdict["full_name"], fdict["fname"], fdict["fsize"])
             self._handle_archive(fdict)
 
             # FIXME: только для тестов
-            if count >= 15:
+            if count >= 1:
                 break
 
 

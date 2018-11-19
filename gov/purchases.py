@@ -94,7 +94,7 @@ class Client():
                 full_file = folder + "/" + file
                 file_size = item[4]
                 yield {
-                    "full_file": full_file,
+                    "full_name": full_file,
                     "fname": file,
                     "fsize": int(file_size)
                 }

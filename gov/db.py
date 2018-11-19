@@ -4,6 +4,7 @@
 import sqlalchemy as sa
 from sqlalchemy.orm import sessionmaker, aliased, relationship
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.dialects.postgresql import JSONB
 from datetime import datetime as dt
 from .log import get_logger
 from .errors import ItIsJustDBInterfaceError
@@ -26,6 +27,9 @@ class DBClient():
         self._app_cfg = AppConfig()
         self._db_cfg = DBConfig()
         self._connect()
+        self.archive = _Archive
+        self.archive_file = _ArchiveFile
+        self.ffl = _FourtyFourthLawContent
 
     def _connect(self):
         """Подключиться к БД
@@ -60,7 +64,7 @@ class DBClient():
 
         self.log.debug(f"Check, is there parsed file {fname} or no")
         sess = self.session()
-        arch = aliased(Archive, name="arch")
+        arch = aliased(_Archive, name="arch")
         query = sess.query(arch)
 
         archive = query.filter(arch.name_with_path == full_fname,
@@ -75,7 +79,7 @@ class DBClient():
         """Проверить информацию по файлу из БД и вернуть результат.
 
         Args:
-            db_file (Archive|ArchiveFile): Объект.
+            db_file (_Archive|_ArchiveFile): Объект.
             fsize (int): Размер файла с FTP сервера.
 
         Returns:
@@ -104,7 +108,7 @@ class DBClient():
 
         self.log.info("Add info about a new archive to database")
         sess = self.session()
-        archive = Archive(name=fname, name_with_path=full_fname, size=fsize)
+        archive = _Archive(name=fname, name_with_path=full_fname, size=fsize)
         sess.add(archive)
         sess.commit()
 
@@ -112,25 +116,63 @@ class DBClient():
 
     def mark_archive_as_parsed(self, archive_id):
         sess = self.session()
-        archive = sess.query(Archive).filter_by(id=archive_id).first()
+        archive = sess.query(_Archive).filter_by(id=archive_id).first()
         archive.has_parsed = True
         archive.parsed_on = dt.utcnow()
         sess.commit()
 
-    def has_parsed_archive_file(self, archive_id: int, fname: str, fsize: int) -> bool:
-        # TODO: подумать, что делать с файлом, который уже был распрасен и который изменился на сервере
-        return False
+    def add_archive_file(self, archive_id: int, fname: str, fsize: int) -> int:
+        self.log.info("Add info to database about a new file inside archive")
+        sess = self.session()
 
-    def get_archive_file_status(self, archive_id, fname, fsize):
-        pass
+        file = _ArchiveFile(archive_id=archive_id, name=fname, size=fsize)
+        sess.add(file)
+        sess.commit()
 
+        return file.id
+
+    def get_archive_file_status(self, archive_id: int, fname: str, fsize: int) -> int:
+        self.log.debug(f"Check, is there parsed file {fname} or no")
+        sess = self.session()
+        query = sess.query(_ArchiveFile)
+        file = query.filter(_ArchiveFile.name == fname,
+                            _ArchiveFile.archive_id == archive_id,
+                            _ArchiveFile.size == fsize).one_or_none()
+
+        sess.close()
+        return self._compare_fdata_and_return(file, fsize)
+
+    def mark_archive_file_as_parsed(self, file_id, session=None):
+        sess = session if session is not None else self.session()
+        archive = sess.query(_ArchiveFile).filter_by(id=file_id).first()
+        archive.has_parsed = True
+        archive.parsed_on = dt.utcnow()
+        if session is None:
+            sess.commit()
+
+    def add_ffl_content(self, file_id: int, content: dict):
+        sess = self.session()
+        content["archive_file_id"] = file_id
+        ffl = _FourtyFourthLawContent(**content)
+        sess.add(ffl)
+        self.mark_archive_file_as_parsed(file_id, session=sess)
+
+        sess.commit()
+
+    def add(self, table_object, session=None):
+        sess = session if session is not None else self.session()
+        sess.add(table_object)
+
+        if session is None:
+            sess.commit()
 
 # below we create DB models
+
 
 _Base = declarative_base()
 
 
-class Archive(_Base):
+class _Archive(_Base):
     __tablename__ = "archives"
 
     id = sa.Column(sa.Integer, primary_key=True)
@@ -143,7 +185,7 @@ class Archive(_Base):
     has_parsed = sa.Column(sa.Boolean, nullable=False, default=False)
 
 
-class ArchiveFile(_Base):
+class _ArchiveFile(_Base):
     __tablename__ = "archive_files"
 
     id = sa.Column(sa.Integer, primary_key=True)
@@ -153,4 +195,21 @@ class ArchiveFile(_Base):
     parsed_on = sa.Column(sa.DateTime, nullable=True)
     has_parsed = sa.Column(sa.Boolean, nullable=False, default=False)
 
-    archives = relationship("Archive")
+    archives = relationship("_Archive")
+
+
+class _FourtyFourthLawContent(_Base):
+    __tablename__ = "fourty_fourth_law_content"
+
+    id = sa.Column(sa.Integer, primary_key=True)
+    archive_file_id = sa.Column(sa.Integer, sa.ForeignKey("archive_files.id"))
+    purchase_number = sa.Column(sa.String, nullable=True)
+    href = sa.Column(sa.String, nullable=True)
+    purchase_object_info = sa.Column(sa.String, nullable=True)
+    placing_way = sa.Column(JSONB, nullable=True)
+    etp = sa.Column(JSONB, nullable=True)
+    purchase_responsible = sa.Column(JSONB, nullable=True)
+    procedure_info = sa.Column(JSONB, nullable=True)
+    lot = sa.Column(JSONB, nullable=True)
+
+    archive_files = relationship("_ArchiveFile")
