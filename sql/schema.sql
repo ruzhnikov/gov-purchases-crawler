@@ -14,9 +14,23 @@ CREATE TABLE archives (
 DROP TABLE IF EXISTS archive_files;
 CREATE TABLE archive_files (
     id SERIAL PRIMARY KEY,
-    archive_id INT REFERENCES archives (id),
+    archive_id INT REFERENCES archives (id) ON DELETE CASCADE,
     name VARCHAR(250) NOT NULL,
     size INT NOT NULL,
     parsed_on TIMESTAMP WITHOUT TIME ZONE DEFAULT NULL,
     has_parsed BOOLEAN NOT NULL DEFAULT FALSE
+);
+
+DROP TABLE IF EXISTS fourty_fourth_law_content;
+CREATE TABLE fourty_fourth_law_content (
+    id SERIAL PRIMARY KEY,
+    archive_file_id INT REFERENCES archive_files (id) ON DELETE CASCADE,
+    purchase_number VARCHAR(100),
+    href VARCHAR(500),
+    purchase_object_info TEXT,
+    placing_way JSONB,
+    etp JSONB,
+    purchase_responsible JSONB,
+    procedure_info JSONB,
+    lot JSONB
 );
