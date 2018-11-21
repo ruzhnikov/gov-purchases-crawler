@@ -9,108 +9,41 @@ from lxml import etree
 from ..db import DBClient
 from ..log import get_logger
 from ..errors import WrongReaderLawError
+from ..util import get_tag, recursive_dict
 
 
 FORTY_FORTH_LAW = 44
 AVAILABLE_LAWS = (FORTY_FORTH_LAW,)
 
 
-class _CommonHandler():
-    """Класс с обработчиками для полей XML структур
-
-    Raises:
-        WrongReaderLawError: Если law не находится в списке AVAILABLE_LAWS.
-    """
-
-    def __init__(self, law):
-        self.log = get_logger(__name__)
-        if law not in AVAILABLE_LAWS:
-            raise WrongReaderLawError(law)
-        self._law = law
-        self.db = DBClient()
-        self.get_tag = lambda tag: etree.QName(tag).localname
-
-    def purchase_number(self, elem, return_in_dict=False):
-        """Обработчик для поля purchaseNumber
-
-        Args:
-            elem (lxml.etree.ElementBase): Элемент XML структуры.
-            return_in_dict (bool, optional): Defaults to False. Не записывать данные в БД, просто вернуть в словаре.
-        """
-        self.log.info(f"Handle {self.get_tag(elem.tag)}")
-        # for e in elem.iter():
-        #     self.log.info(f"{self.get_tag(e.tag)} => {e.text}")
-
-        return "purchase_number", elem.text
-
-    def placing_way(self, elem):
-        self.log.info(f"Handle {self.get_tag(elem.tag)}")
-        # for e in elem.iter():
-        #     self.log.info(f"{self.get_tag(e.tag)} => {e.text}")
-
-        return "placing_way", {}
-
-    def purchase_responsible(self, elem):
-        self.log.info(f"Handle {self.get_tag(elem.tag)}")
-        for e in elem.iter():
-            self.log.info(f"{self.get_tag(e.tag)} => {e.text}")
-
-        return "purchase_responsible", {}
-
-    def etp(self, elem):
-        self.log.info(f"Handle {self.get_tag(elem.tag)}")
-        data = {}
-        for e in list(elem):
-            tag = self.get_tag(e.tag)
-            data[tag] = e.text
-        return "etp", data
-
-    def procedure_info(self, elem):
-        self.log.info(f"Handle {self.get_tag(elem.tag)}")
-        # for e in elem.iter():
-        #     self.log.info(f"{self.get_tag(e.tag)} => {e.text}")
-        return "procedure_info", {}
-
-    def lot(self, elem):
-        self.log.info(f"Handle {self.get_tag(elem.tag)}")
-        # for e in elem.iter():
-        #     self.log.info(f"{self.get_tag(e.tag)} => {e.text}")
-        return "lot", {}
-
-    def href(self, elem):
-        self.log.info(f"Handle {self.get_tag(elem.tag)}")
-        return "href", elem.text
-
-    def purchase_object_info(self, elem):
-        self.log.info(f"Handle {self.get_tag(elem.tag)}")
-        return "purchase_object_info", elem.text
-
-
 class FortyFourthLaw():
     """Обработчик для ФЗ44"""
 
-    # хранилище для обработчиков тэгов. Задаётся дальше.
-    __HANDLERS = {}
+    __XML_TAGS = {}
 
     def __init__(self):
         self.log = get_logger(__name__)
         self.db = DBClient()
-        self.h = _CommonHandler(FORTY_FORTH_LAW)
-        self._register_handlers()
+        self._register_tags()
 
-    def _register_handlers(self):
-        self.log.debug("Register handlers")
-        self.__HANDLERS = {
-            "purchaseNumber": self.h.purchase_number,
-            "placingWay": self.h.placing_way,
-            "purchaseResponsible": self.h.purchase_responsible,
-            "ETP": self.h.etp,
-            "procedureInfo": self.h.procedure_info,
-            "lot": self.h.lot,
-            "purchaseObjectInfo": self.h.purchase_object_info,
-            "href": self.h.href
+    def _parse_xml(self, elem):
+        (tag, elem_data) = recursive_dict(elem)
+        return self.__XML_TAGS[tag], elem_data
+
+    def _register_tags(self):
+        """Register tags
+        """
+        self.log.info("Fill tag aliases")
+        self.__XML_TAGS = {
+            "purchaseNumber": "purchase_number",
+            "placingWay": "placing_way",
+            "purchaseResponsible": "purchase_responsible",
+            "ETP": "etp",
+            "procedureInfo": "procedure_info",
+            "lot": "lot",
+            "purchaseObjectInfo": "purchase_object_info",
+            "href": "href"
         }
-        self.log.debug("Handler were registered")
 
     def handle_archive(self, archive: str, archive_id: int):
         """Обработка архива. Чтение, парсинг и запись в БД
@@ -133,14 +66,9 @@ class FortyFourthLaw():
 
         for attr in list(root):
             for elem in list(attr):
-                tag_name = self.h.get_tag(elem.tag)
-                if tag_name in self.__HANDLERS:
-                    handler = self.__HANDLERS[tag_name]
-                    if not callable(handler):
-                        self.log.warning(f"A handler of tag {tag_name} is not callable and its will be skipped")
-                        continue
-                    self.log.debug(f"A handler for tag {tag_name} was found. Call it")
-                    field_key, field_value = handler(elem)
+                tag_name = get_tag(elem.tag)
+                if tag_name in self.__XML_TAGS:
+                    field_key, field_value = self._parse_xml(elem)
                     file_data[field_key] = field_value
                 else:
                     self.log.debug(f"There is no handler for {tag_name}. Skip it")
@@ -150,7 +78,7 @@ class FortyFourthLaw():
             return
 
         self.log.debug(f"{file_data}")
-        self.db.add_ffl_content(file_id, file_data)
+        self.db.add_ffl_notification(file_id, file_data)
 
     def _read_archive(self, archive: str, archive_id: int):
         """Чтение архива. Возвращает генератор

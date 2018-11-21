@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-# from sqlalchemy import create_engine, Column, Integer, String, DateTime
 import sqlalchemy as sa
 from sqlalchemy.orm import sessionmaker, aliased, relationship
 from sqlalchemy.ext.declarative import declarative_base
@@ -150,7 +149,13 @@ class DBClient():
         if session is None:
             sess.commit()
 
-    def add_ffl_content(self, file_id: int, content: dict):
+    def add_ffl_notification(self, file_id: int, content: dict):
+        """Add new row to 44th law notifications table.
+        
+        Args:
+            file_id (int): ID of row of XML file information.
+            content (dict): Content to add.
+        """
         sess = self.session()
         content["archive_file_id"] = file_id
         ffl = _FourtyFourthLawContent(**content)
@@ -158,13 +163,6 @@ class DBClient():
         self.mark_archive_file_as_parsed(file_id, session=sess)
 
         sess.commit()
-
-    def add(self, table_object, session=None):
-        sess = session if session is not None else self.session()
-        sess.add(table_object)
-
-        if session is None:
-            sess.commit()
 
 # below we create DB models
 
