@@ -18,19 +18,30 @@ CREATE TABLE archive_files (
     name VARCHAR(250) NOT NULL,
     size INT NOT NULL,
     parsed_on TIMESTAMP WITHOUT TIME ZONE DEFAULT NULL,
-    has_parsed BOOLEAN NOT NULL DEFAULT FALSE
+    has_parsed BOOLEAN NOT NULL DEFAULT FALSE,
+    reason VARCHAR(250)
 );
 
-DROP TABLE IF EXISTS fourty_fourth_law_content;
-CREATE TABLE fourty_fourth_law_content (
-    id SERIAL PRIMARY KEY,
-    archive_file_id INT REFERENCES archive_files (id) ON DELETE CASCADE,
-    purchase_number VARCHAR(100),
-    href VARCHAR(500),
-    purchase_object_info TEXT,
-    placing_way JSONB,
-    etp JSONB,
-    purchase_responsible JSONB,
-    procedure_info JSONB,
-    lot JSONB
-);
+CREATE SCHEMA forty_fourth_law;
+
+-- DROP TABLE IF EXISTS forty_fourth_law.notifications;
+-- CREATE TABLE forty_fourth_law.notifications (
+--     id SERIAL PRIMARY KEY,
+--     archive_file_id INT REFERENCES archive_files (id) ON DELETE CASCADE,
+--     purchase_number VARCHAR(100),
+--     href VARCHAR(500),
+--     purchase_object_info TEXT,
+--     placing_way JSONB,
+--     etp JSONB,
+--     purchase_responsible JSONB,
+--     procedure_info JSONB,
+--     lot JSONB,
+--     attachments JSONB
+-- );
+
+-- DROP TABLE IF EXISTS forty_fourth_law.clarifications;
+-- CREATE TABLE forty_fourth_law.clarifications (
+--     id SERIAL PRIMARY KEY,
+--     archive_file_id INT REFERENCES archive_files (id) ON DELETE CASCADE,
+--     purchase_number VARCHAR(100),
+-- )

@@ -26,9 +26,6 @@ class DBClient():
         self._app_cfg = AppConfig()
         self._db_cfg = DBConfig()
         self._connect()
-        self.archive = _Archive
-        self.archive_file = _ArchiveFile
-        self.ffl = _FourtyFourthLawContent
 
     def _connect(self):
         """Подключиться к БД
@@ -141,28 +138,32 @@ class DBClient():
         sess.close()
         return self._compare_fdata_and_return(file, fsize)
 
-    def mark_archive_file_as_parsed(self, file_id, session=None):
+    def mark_archive_file_as_parsed(self, file_id, session=None, reason=None):
         sess = session if session is not None else self.session()
-        archive = sess.query(_ArchiveFile).filter_by(id=file_id).first()
-        archive.has_parsed = True
-        archive.parsed_on = dt.utcnow()
+        file = sess.query(_ArchiveFile).filter_by(id=file_id).first()
+        file.has_parsed = True
+        file.parsed_on = dt.utcnow()
+        file.reason = reason
         if session is None:
             sess.commit()
 
     def add_ffl_notification(self, file_id: int, content: dict):
         """Add new row to 44th law notifications table.
-        
+
         Args:
             file_id (int): ID of row of XML file information.
             content (dict): Content to add.
         """
         sess = self.session()
         content["archive_file_id"] = file_id
-        ffl = _FourtyFourthLawContent(**content)
+        ffl = _FortyFourthLawNotifications(**content)
         sess.add(ffl)
         self.mark_archive_file_as_parsed(file_id, session=sess)
 
         sess.commit()
+
+    def update_or_create_ffl_notification(self, file_id: int, content: dict):
+        pass
 
 # below we create DB models
 
@@ -192,12 +193,14 @@ class _ArchiveFile(_Base):
     size = sa.Column(sa.Integer, nullable=False)
     parsed_on = sa.Column(sa.DateTime, nullable=True)
     has_parsed = sa.Column(sa.Boolean, nullable=False, default=False)
+    reason = sa.Column(sa.String(250), nullable=True)
 
     archives = relationship("_Archive")
 
 
-class _FourtyFourthLawContent(_Base):
-    __tablename__ = "fourty_fourth_law_content"
+class _FortyFourthLawNotifications(_Base):
+    __tablename__ = "notifications"
+    __table_args__ = ({"schema": "forty_fourth_law"})
 
     id = sa.Column(sa.Integer, primary_key=True)
     archive_file_id = sa.Column(sa.Integer, sa.ForeignKey("archive_files.id"))
@@ -209,5 +212,6 @@ class _FourtyFourthLawContent(_Base):
     purchase_responsible = sa.Column(JSONB, nullable=True)
     procedure_info = sa.Column(JSONB, nullable=True)
     lot = sa.Column(JSONB, nullable=True)
+    attachments = sa.Column(JSONB, nullable=True)
 
     archive_files = relationship("_ArchiveFile")

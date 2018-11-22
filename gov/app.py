@@ -5,7 +5,7 @@ import os
 from .log import get_logger
 from .purchases import Client
 from .db import DBClient
-from .law.readers import FortyFourthLaw
+from .law.readers import FortyFourthLawNotifications
 from .config import AppConfig
 
 
@@ -14,7 +14,7 @@ class _Application():
     def __init__(self):
         self.log = get_logger(__name__)
         self.db = DBClient()
-        self.ffl = FortyFourthLaw()
+        self.ffl = FortyFourthLawNotifications()
         self.cfg = AppConfig()
         self._archives = {}
 
@@ -76,7 +76,7 @@ class _Application():
         # после работы подчищаем за собой
         if os.path.isfile(zip_file):
             self.log.debug(f"Remove file {zip_file}")
-            os.remove(zip_file)
+            # os.remove(zip_file)
 
             self.log.debug("Clean archive info")
             if finfo["full_name"] in self._archives:
