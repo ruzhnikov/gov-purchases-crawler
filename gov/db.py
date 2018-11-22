@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 
+"""A wrapper over database.
+"""
+
 import sqlalchemy as sa
 from sqlalchemy.orm import sessionmaker, aliased, relationship
 from sqlalchemy.ext.declarative import declarative_base
@@ -11,7 +14,7 @@ from .config import DBConfig, AppConfig
 
 
 class DBClient():
-    """Интерфейс для работы с базой данных.
+    """Interface to work with database.
     """
 
     FILE_STATUS = {
@@ -28,9 +31,6 @@ class DBClient():
         self._connect()
 
     def _connect(self):
-        """Подключиться к БД
-        """
-
         cfg = self._db_cfg
         conn_str = f"postgresql://{cfg.user}:{cfg.password}@{cfg.host}/{cfg.name}"
         engine_echo = True if self._app_cfg.mode == "dev" else False
@@ -39,9 +39,6 @@ class DBClient():
         self._check_connection()
 
     def _check_connection(self):
-        """Проверить коннект к базе
-        """
-
         sess = self.session()
         sess.execute("SELECT TRUE")
         sess.close()
