@@ -1,7 +1,7 @@
 
 # -*- coding: utf-8 -*-
 
-"""Модуль для работы с закупками по разным ФЗ
+"""A module for working with purchases over different laws.
 """
 
 from zipfile import ZipFile
@@ -9,7 +9,7 @@ from lxml import etree
 from ..db import DBClient
 from ..log import get_logger
 from ..errors import WrongReaderLawError
-from ..util import get_tag, recursive_dict
+from . import get_tag, recursive_dict
 
 
 class FortyFourthLawNotifications():
@@ -67,7 +67,7 @@ class FortyFourthLawNotifications():
         self.db.mark_archive_as_parsed(archive_id)
 
     def _parse_and_upload_xml(self, xml: bytes, file_id: int):
-        """Parse XML file. If it is 44th law file, upload its to DB.
+        """Parse XML file. Upload its data to DB.
 
         Args:
             xml (bytes): Raw XML data.
