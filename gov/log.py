@@ -7,7 +7,7 @@ from .config import AppConfig
 
 _DEFAULT_LOGGER_NAME = "Crawler"
 _LOG_FORMAT = "%(asctime)s | %(levelname)s | %(process)d | " \
-    "%(name)s | %(filename)s:%(lineno)s | %(message)s"
+    "%(filename)s:%(lineno)s | %(message)s"
 cfg = AppConfig()
 
 
