@@ -12,7 +12,7 @@ setup(
     author_email="ruzhnikov85@gmail.com",
     license="MIT",
     python_requires='>=3.7.0',
-    install_requires=["asyncio", "lxml", "psycopg2-binary"],
+    install_requires=["lxml", "psycopg2", "psycopg2-binary"],
     description="Crawler of resources from ftp.zakupki.gov.ru",
     entry_points={
         "console_scripts": [

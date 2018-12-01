@@ -76,7 +76,7 @@ class _Application():
         # после работы подчищаем за собой
         if os.path.isfile(zip_file):
             self.log.debug(f"Remove file {zip_file}")
-            # os.remove(zip_file)
+            os.remove(zip_file)
 
             self.log.debug("Clean archive info")
             if finfo["full_name"] in self._archives:
