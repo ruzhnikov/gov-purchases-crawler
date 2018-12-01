@@ -8,7 +8,6 @@ from .errors import LostConfigFieldError
 
 _CONFIG = {
     "__parsed_env": False,
-    "__parsed_args": False,
     "__checked": False
 }
 
@@ -91,7 +90,6 @@ class AppConfig(_BaseConfig):
 
 def _read_config():
     _read_env()
-    _read_args()
     _check_config()
 
 
@@ -110,23 +108,6 @@ def _read_env():
                 continue
             _CONFIG[cfg_key][field.lower()] = os.environ.get(env_field)
     _CONFIG["__parsed_env"] = True
-
-
-def _read_args():
-    if _CONFIG["__parsed_args"]:
-        return
-
-    parser = argparse.ArgumentParser()
-    requiredNamed = parser.add_argument_group('required named arguments')
-    requiredNamed.add_argument("-s", "--server", type=str, help="FTP server address", required=True)
-    requiredNamed.add_argument("-t", "--tmp_folder", type=str,
-                               help="Temporary folder for archives",
-                               required=True)
-    args = parser.parse_args()
-
-    _CONFIG[AppConfig._PREFIX]["ftp_server"] = args.server
-    _CONFIG[AppConfig._PREFIX]["tmp_folder"] = args.tmp_folder
-    _CONFIG["__parsed_args"] = True
 
 
 def _check_config():
