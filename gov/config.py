@@ -26,9 +26,14 @@ class _BaseConfig():
 class DBConfig(_BaseConfig):
     """Класс для работы с конфигурацией базы данных.
     """
-    _FIELDS = ("HOST", "USER", "PASSWORD", "NAME")
-    _REQUIRED = _FIELDS
+    _FIELDS = ("HOST", "USER", "PASSWORD", "NAME", "ECHO")
+    _REQUIRED = ("HOST", "USER", "PASSWORD", "NAME")
     _PREFIX = "DB"
+
+    def __init__(self):
+        super().__init__()
+        if "echo" in self._CFG.keys() and self._CFG["echo"] is not None:
+            self._CFG["echo"] = str.lower(self._CFG["echo"])
 
     @property
     def host(self):
@@ -46,9 +51,14 @@ class DBConfig(_BaseConfig):
     def name(self):
         return self._CFG["name"]
 
+    @property
+    def echo(self):
+        return self._CFG.get("echo")
+
+
 
 class AppConfig(_BaseConfig):
-    _FIELDS = ("MODE", "FTP_SERVER", "TMP_FOLDER")
+    _FIELDS = ("MODE", "FTP_SERVER", "TMP_FOLDER", "LIMIT_ARCHIVES")
     _REQUIRED = ("FTP_SERVER", "TMP_FOLDER")
     _PREFIX = "APP"
     __avail_mode = ("dev", "prod")
@@ -60,6 +70,8 @@ class AppConfig(_BaseConfig):
         self.log = self.LogConfig()
         if self.mode == "dev":
             self.log._CFG["level"] = "DEBUG"
+        if "limit_archives" in self._CFG.keys():
+            self._CFG["limit_archives"] = int(self._CFG["limit_archives"])
 
     @property
     def mode(self):
@@ -72,6 +84,11 @@ class AppConfig(_BaseConfig):
     @property
     def tmp_folder(self):
         return self._CFG["tmp_folder"]
+
+    @property
+    def limit_archives(self):
+        return self._CFG.get("limit_archives")
+
 
     class LogConfig(_BaseConfig):
         _FIELDS = ("LEVEL")
