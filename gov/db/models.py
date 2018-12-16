@@ -1,6 +1,8 @@
 
 # -*- coding: utf-8 -*-
 
+"""Class that contains description of SQLAlchemy tables"""
+
 import sqlalchemy as sa
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
@@ -11,19 +13,21 @@ _Base = declarative_base()
 
 
 class Archive(_Base):
+    """Table `archive`
+    """
     __tablename__ = "archives"
 
     id = sa.Column(sa.Integer, primary_key=True)
     name = sa.Column(sa.String, nullable=False)
-    name_with_path = sa.Column(sa.String, nullable=False, unique=True)
     size = sa.Column(sa.Integer, nullable=False)
     downloaded_on = sa.Column(sa.DateTime, nullable=False, server_default=sa.text("NOW() AT TIME ZONE 'utc'"))
     parsed_on = sa.Column(sa.DateTime, nullable=True)
-    updated_on = sa.Column(sa.DateTime, nullable=True)
     has_parsed = sa.Column(sa.Boolean, nullable=False, default=False)
 
 
 class ArchiveFile(_Base):
+    """Table `archive_files`
+    """
     __tablename__ = "archive_files"
 
     id = sa.Column(sa.Integer, primary_key=True)

@@ -53,7 +53,7 @@ def recursive_read_dict(element, skip_tags=(), tag_handlers={}):
     element_data = None
 
     if len(elements) == 0:
-        if tag in tag_handlers.keys() and callable(tag_handlers[tag]):
+        if tag in tag_handlers and callable(tag_handlers[tag]):
             handler = tag_handlers[tag]
         else:
             handler = bool_replace
@@ -64,9 +64,12 @@ def recursive_read_dict(element, skip_tags=(), tag_handlers={}):
             key, val = recursive_read_dict(local_elem, skip_tags, tag_handlers)
             if key in skip_tags:
                 continue
-            if key in local_dict.keys():
+
+            # We can have two or more subelements with the same name.
+            # Combine these elements into array
+            if key in local_dict:
                 if isinstance(local_dict[key], dict):
-                    local_dict[key] = [ local_dict[key], val ]
+                    local_dict[key] = [local_dict[key], val]
                 else:
                     local_dict[key].append(val)
                 continue
@@ -76,16 +79,3 @@ def recursive_read_dict(element, skip_tags=(), tag_handlers={}):
 
     return tag, element_data
 
-
-def convert_date_to_utc(date_str):
-    dt = datetime.strptime(date_str, "%Y-%m-%dT%H:%M:%S%z")
-    dt = dt.replace(tzinfo=timezone.utc) - dt.utcoffset()
-
-    return dt.strftime("%Y-%m-%dT%H:%M:%S")
-
-
-def remove_signature(elem_data: dict):
-    if "signature" in elem_data:
-        del elem_data["signature"]
-
-    return elem_data

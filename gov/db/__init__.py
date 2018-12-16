@@ -64,11 +64,10 @@ class DBClient():
         else:
             return self.FILE_STATUS["FILE_EXISTS"]
 
-    def get_archive_status(self, full_fname: str, fname: str, fsize: int):
+    def get_archive_status(self, fname: str, fsize: int):
         """Проверяет, есть ли в БД уже распарсенный файл или нет.
 
         Args:
-            full_fname (str): Файл с полным путём до него на сервере.
             fname (str): Имя файла.
             fsize (int): Размер файла.
 
@@ -81,19 +80,27 @@ class DBClient():
         arch = aliased(models.Archive, name="arch")
         query = sess.query(arch)
 
-        archive = query.filter(arch.name_with_path == full_fname,
-                               arch.name == fname,
+        archive = query.filter(arch.name == fname,
                                arch.size == fsize).one_or_none()
 
         sess.close()
 
         return self._compare_fdata_and_return(archive, fsize)
 
-    def add_archive(self, full_fname: str, fname: str, fsize: int) -> int:
+    def get_archive(self, fname: str, fsize: int) -> models.Archive:
+        sess = self.session()
+        query = sess.query(models.Archive)
+
+        archive = query.filter(models.Archive.name == fname,
+                               models.Archive.size == fsize).first()
+        sess.close()
+
+        return archive
+
+    def add_archive(self, fname: str, fsize: int) -> int:
         """Добавляет информацию об архиве в БД. Возвращает ID новой записи.
 
         Args:
-            full_fname (str): Файл с полным путём до него на сервере.
             fname (str): Имя файла.
             fsize (int): Размер файла.
 
@@ -101,13 +108,16 @@ class DBClient():
             int: ID новой записи.
         """
 
-        self.log.info("Add info about a new archive to database")
+        self.log.debug(f"Add info about a new archive {fname} to database")
         sess = self.session()
-        archive = models.Archive(name=fname, name_with_path=full_fname, size=fsize)
+        archive = models.Archive(name=fname, size=fsize)
         sess.add(archive)
         sess.commit()
 
-        return archive.id
+        archive_id = archive.id
+        sess.close()
+
+        return archive_id
 
     def mark_archive_as_parsed(self, archive_id):
         sess = self.session()
@@ -115,16 +125,20 @@ class DBClient():
         archive.has_parsed = True
         archive.parsed_on = dt.utcnow()
         sess.commit()
+        sess.close()
 
     def add_archive_file(self, archive_id: int, fname: str, fsize: int) -> int:
-        self.log.info("Add info to database about a new file inside archive")
+        self.log.debug(f"Add info to database about a new file {fname} inside archive")
         sess = self.session()
 
         file = models.ArchiveFile(archive_id=archive_id, name=fname, size=fsize)
         sess.add(file)
         sess.commit()
 
-        return file.id
+        file_id = file.id
+        sess.close()
+
+        return file_id
 
     def get_archive_file_status(self, archive_id: int, fname: str, fsize: int) -> int:
         self.log.debug(f"Check, is there parsed file {fname} or no")
@@ -138,6 +152,17 @@ class DBClient():
         sess.close()
         return self._compare_fdata_and_return(file, fsize)
 
+    def get_archive_file(self, archive_id: int, fname: str, fsize: int) -> models.ArchiveFile:
+        sess = self.session()
+        arch_file = aliased(models.ArchiveFile, name="arch_file")
+        query = sess.query(arch_file)
+        file = query.filter(arch_file.name == fname,
+                            arch_file.archive_id == archive_id,
+                            arch_file.size == fsize).first()
+
+        sess.close()
+        return file
+
     def mark_archive_file_as_parsed(self, file_id, xml_type, session=None, reason=None):
         sess = session if session is not None else self.session()
         file = sess.query(models.ArchiveFile).filter_by(id=file_id).first()
@@ -148,11 +173,16 @@ class DBClient():
         if session is None:
             sess.commit()
 
-    def update_archive_file(self, file_id: int, session=None, **content):
-        pass
+    def delete_archive_files(self, archive_id: int):
+        sess = self.session()
+        sess.query(models.ArchiveFile).filter(models.ArchiveFile.archive_id == archive_id).delete()
+        sess.commit()
+        sess.close()
 
 
 class FortyFourthLawDB(DBClient):
+    """Class for working with DB of 44th law
+    """
     def __init__(self):
         super().__init__()
         self.often_tags_table = models.FFLNotificationOftenTags
@@ -167,4 +197,13 @@ class FortyFourthLawDB(DBClient):
             if columns.has_key(row.field):
                 yield row.tag, row.field
 
+        sess.close()
+
+    def delete_file_tags(self, file_id: int):
+        sess = self.session()
+        for model in (models.FFLNotificationOftenTags,
+                      models.FFLNotificationRareTags,
+                      models.FFLNotificationUnknownTags):
+            sess.query(model).filter(model.archive_file_id == file_id).delete()
+        sess.commit()
         sess.close()

@@ -32,7 +32,7 @@ class DBConfig(_BaseConfig):
 
     def __init__(self):
         super().__init__()
-        if "echo" in self._CFG.keys() and self._CFG["echo"] is not None:
+        if "echo" in self._CFG and self._CFG["echo"] is not None:
             self._CFG["echo"] = str.lower(self._CFG["echo"])
 
     @property
@@ -70,7 +70,7 @@ class AppConfig(_BaseConfig):
         self.log = self.LogConfig()
         if self.mode == "dev":
             self.log._CFG["level"] = "DEBUG"
-        if "limit_archives" in self._CFG.keys():
+        if "limit_archives" in self._CFG:
             self._CFG["limit_archives"] = int(self._CFG["limit_archives"])
 
     @property

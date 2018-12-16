@@ -2,7 +2,7 @@ DROP TABLE IF EXISTS archives;
 CREATE TABLE archives (
     id SERIAL PRIMARY KEY,
     name VARCHAR(250) NOT NULL,
-    name_with_path VARCHAR(500) NOT NULL,
+    -- name_with_path VARCHAR(500) NOT NULL,
     size INT NOT NULL,
     downloaded_on TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT (NOW() AT TIME ZONE 'utc'),
     parsed_on TIMESTAMP WITHOUT TIME ZONE DEFAULT NULL,

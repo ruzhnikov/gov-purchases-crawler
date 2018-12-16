@@ -9,6 +9,10 @@ from .law.readers import FortyFourthLawNotifications
 from .config import AppConfig
 
 
+_ARCHIVE_EXISTS_BUT_NOT_PARSED = 1
+_ARCHIVE_EXISTS_BUT_SIZE_DIFFERENT = 2
+
+
 class _Application():
 
     def __init__(self):
@@ -28,20 +32,20 @@ class _Application():
             bool: Результат проверки.
         """
 
-        self._archives[finfo["full_name"]] = {"need_to_update": False}
-        archive = self._archives[finfo["full_name"]]
-
         # Смотрим, что у нас в БД по этому файлу. Может быть ситуация, что файл в БД имеется и он
         # был прочитан и распарсен, но метаданные между ним и файлом с FTP сервера отличаются.
         # В таком случае нам нужно обновить данные в БД.
-        arch_status = self.db.get_archive_status(finfo["full_name"], finfo["fname"], finfo["fsize"])
-        if arch_status == self.db.FILE_STATUS["FILE_EXISTS"]:
-            return True
-        elif arch_status == self.db.FILE_STATUS["FILE_DOES_NOT_EXIST"]:
+        arch_status = self.db.get_archive_status(finfo["fname"], finfo["fsize"])
+
+        if arch_status == self.db.FILE_STATUS["FILE_DOES_NOT_EXIST"]:
             return False
-        elif arch_status in (self.db.FILE_STATUS["FILE_EXISTS_BUT_NOT_PARSED"],
-                             self.db.FILE_STATUS["FILE_EXISTS_BUT_SIZE_DIFFERENT"]):
-            archive["need_to_update"] = True
+        elif arch_status == self.db.FILE_STATUS["FILE_EXISTS"]:
+            return True
+        elif arch_status == self.db.FILE_STATUS["FILE_EXISTS_BUT_NOT_PARSED"]:
+            self._archives[finfo["full_name"]] = _ARCHIVE_EXISTS_BUT_NOT_PARSED
+            return True
+        elif arch_status == self.db.FILE_STATUS["FILE_EXISTS_BUT_SIZE_DIFFERENT"]:
+            self._archives[finfo["full_name"]] = _ARCHIVE_EXISTS_BUT_SIZE_DIFFERENT
             return True
 
         return False
@@ -56,11 +60,13 @@ class _Application():
             bool: Результат проверки.
         """
         if finfo["full_name"] not in self._archives:
-            self.log.warn(f"There is no information about archive {finfo} inside me")
             return False
 
-        archive = self._archives[finfo["full_name"]]
-        return archive["need_to_update"]
+        return True
+
+    def _need_to_clean_old_files(self, finfo: dict) -> bool:
+        key = finfo["full_name"]
+        return key in self._archives and self._archives[key] == _ARCHIVE_EXISTS_BUT_SIZE_DIFFERENT
 
     def _handle_archive(self, finfo: dict):
         """Работа со скачанным файлом. После обработки файл удаляется
@@ -73,7 +79,7 @@ class _Application():
         zip_file = self.cfg.tmp_folder + "/" + finfo["fname"]
         self.ffl.handle_archive(zip_file, finfo["id"])
 
-        # после работы подчищаем за собой
+        # clean after work
         if os.path.isfile(zip_file):
             self.log.debug(f"Remove file {zip_file}")
             os.remove(zip_file)
@@ -82,30 +88,60 @@ class _Application():
             if finfo["full_name"] in self._archives:
                 del self._archives[finfo["full_name"]]
 
-    def _update_archive(self, finfo: dict):
-        pass
-
     def run(self):
-        """Главная функция. Запускаемся, читаем данные"""
+        """General method. Running, read and handle archives"""
 
         server = Client(self.cfg.ftp_server, download_dir=self.cfg.tmp_folder)
 
-        count = 0  # FIXME: только для тестов
+        # We can handle particular amount of archives.
+        # This parameter is set by config.
+        count = 0
+        error_count = 0
+        need_limit = self.cfg.limit_archives is not None
+        limit = self.cfg.limit_archives if need_limit else None
+
+        self.log.info(f"Limit is {limit}")
+
         for fdict in server.read():
-            count += 1  # FIXME: только для тестов
+            if need_limit and limit == 0:
+                break
+
+            archive_id = None
+
             if self._has_archive(fdict):
-                if self._need_to_update_archive(fdict):
-                    server.download(fdict["full_name"], fdict["fname"])
-                    self._update_archive(fdict)
+                # we already have this parsed archive. Just skip it.
+                if not self._need_to_update_archive(fdict):
+                    self.log.debug(f"The file {fdict['fname']} had been parsed early. Skip them.")
+                    continue
+
+                # we have non parsed archive or size of archive is different. Anyway we should
+                # reparse archive again.
+                archive = self.db.get_archive(fdict["fname"], fdict["fsize"])
+                archive_id = archive.id
+                if self._need_to_clean_old_files(fdict):
+                    self.db.delete_archive_files(archive_id)
+
+            count += 1
+            try:
+                server.download(fdict["full_name"], fdict["fname"])
+            except Exception as e:
+                # TODO: here we should catch exception of "time is over" and reconnect to server
+                self.log.error(f"Error to download archive: {e}")
+                error_count += 1
+                self.log.info("Try to next iteration")
                 continue
 
-            server.download(fdict["full_name"], fdict["fname"])
-            fdict["id"] = self.db.add_archive(fdict["full_name"], fdict["fname"], fdict["fsize"])
+            if archive_id is None:
+                archive_id = self.db.add_archive(fname=fdict["fname"], fsize=fdict["fsize"])
+
+            fdict["id"] = archive_id
             self._handle_archive(fdict)
 
-            # FIXME: только для тестов
-            if count >= 1:
+            if need_limit and count >= limit:
                 break
+
+        self.log.info(f"Total were handled: {count} archive(s)")
+        self.log.info(f"Total were obtained {error_count} errors")
 
 
 def run():
@@ -116,3 +152,4 @@ def run():
     app = _Application()
     log.debug("Run")
     app.run()
+    log.info("End of work")
