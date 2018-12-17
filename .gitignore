@@ -8,3 +8,4 @@ tmp
 *.txt
 env.inc
 docker
+.pytest_cache
