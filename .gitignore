@@ -9,3 +9,4 @@ tmp
 env.inc
 docker
 .pytest_cache
+.eggs

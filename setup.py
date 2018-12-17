@@ -13,6 +13,8 @@ setup(
     license="MIT",
     python_requires='>=3.7.0',
     install_requires=["lxml", "psycopg2", "psycopg2-binary"],
+    setup_requires=['pytest-runner'],
+    tests_require=["pytest"],
     description="Crawler of resources from ftp.zakupki.gov.ru",
     entry_points={
         "console_scripts": [
