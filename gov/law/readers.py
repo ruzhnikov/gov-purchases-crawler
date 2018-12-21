@@ -93,6 +93,7 @@ class FortyFourthLawNotifications():
                 else:
                     file_id = self.db.add_archive_file(archive_id, fname, fsize)
 
+                self.log.info(f"Parse XML file {fname}")
                 try:
                     self._parse_and_upload_xml(xml, file_id, reason)
                 except Exception as e:

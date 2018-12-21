@@ -24,7 +24,7 @@ class _BaseConfig():
 
 
 class DBConfig(_BaseConfig):
-    """Класс для работы с конфигурацией базы данных.
+    """Config for working with database.
     """
     _FIELDS = ("HOST", "USER", "PASSWORD", "NAME", "ECHO")
     _REQUIRED = ("HOST", "USER", "PASSWORD", "NAME")
@@ -56,20 +56,25 @@ class DBConfig(_BaseConfig):
         return self._CFG.get("echo")
 
 
-
 class AppConfig(_BaseConfig):
+    """The main application config.
+    """
     _FIELDS = ("MODE", "FTP_SERVER", "TMP_FOLDER", "LIMIT_ARCHIVES")
     _REQUIRED = ("FTP_SERVER", "TMP_FOLDER")
     _PREFIX = "APP"
-    __avail_mode = ("dev", "prod")
+    _default_mode = "prod"
+    _avail_modes = ("dev", _default_mode)
 
     def __init__(self):
         super().__init__()
-        if "mode" not in self._CFG or self._CFG["mode"] not in self.__avail_mode:
-            self._CFG["mode"] = "prod"
-        self.log = self.LogConfig()
-        if self.mode == "dev":
+        if "mode" not in self._CFG or self._CFG["mode"] not in self._avail_modes:
+            self._CFG["mode"] = self._default_mode
+
+        self.log = self._LogConfig()
+
+        if self.mode == "dev" and not self.log._has_configured_level_value:
             self.log._CFG["level"] = "DEBUG"
+
         if "limit_archives" in self._CFG:
             self._CFG["limit_archives"] = int(self._CFG["limit_archives"])
 
@@ -89,16 +94,19 @@ class AppConfig(_BaseConfig):
     def limit_archives(self):
         return self._CFG.get("limit_archives")
 
-
-    class LogConfig(_BaseConfig):
-        _FIELDS = ("LEVEL")
+    class _LogConfig(_BaseConfig):
+        """Config for logger.
+        """
+        _FIELDS = ("LEVEL",)
         _PREFIX = "APP_LOG"
-        __default_level = "INFO"
+        _default_level = "INFO"
+        _has_configured_level_value = True
 
         def __init__(self):
             super().__init__()
             if "level" not in self._CFG:
-                self._CFG["level"] = self.__default_level
+                self._CFG["level"] = self._default_level
+                self._has_configured_level_value = False
 
         @property
         def level(self):
@@ -110,12 +118,20 @@ def _read_config():
     _check_config()
 
 
+def _is_env_read():
+    return _CONFIG["__parsed_env"] is True
+
+
+def _is_config_checked():
+    return _CONFIG["__checked"] is True
+
+
 def _read_env():
-    if _CONFIG["__parsed_env"]:
+    if _is_env_read():
         return
 
     # идём по полям классов, читаём данные из ENV
-    for cls in (DBConfig, AppConfig, AppConfig.LogConfig):
+    for cls in (DBConfig, AppConfig, AppConfig._LogConfig):
         for field in cls._FIELDS:
             env_field = cls._PREFIX + "_" + field
             cfg_key = cls._PREFIX
@@ -128,10 +144,10 @@ def _read_env():
 
 
 def _check_config():
-    if _CONFIG["__checked"]:
+    if _is_config_checked():
         return
 
-    for cls in (DBConfig, AppConfig, AppConfig.LogConfig):
+    for cls in (DBConfig, AppConfig, AppConfig._LogConfig):
         for field in cls._REQUIRED:
             lower_field = str.lower(field)
             env_field = cls._PREFIX + "_" + field
