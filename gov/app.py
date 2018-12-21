@@ -75,7 +75,7 @@ class _Application():
             finfo (dict): Кортеж с данными о файле.
         """
 
-        self.log.info(f"File: {finfo['fname']}; Size: {finfo['fsize']}")
+        self.log.info(f"Archive file: {finfo['fname']}; Size: {finfo['fsize']}")
         zip_file = self.cfg.tmp_folder + "/" + finfo["fname"]
         self.ffl.handle_archive(zip_file, finfo["id"])
 
