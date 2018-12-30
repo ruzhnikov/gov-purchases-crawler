@@ -11,7 +11,7 @@ setup(
     author="Alexander Ruzhnikov",
     author_email="ruzhnikov85@gmail.com",
     license="MIT",
-    python_requires='>=3.6.3',
+    python_requires='>=3.6.0',
     install_requires=["lxml", "psycopg2", "psycopg2-binary", "SQLAlchemy"],
     setup_requires=['pytest-runner'],
     tests_require=["pytest"],

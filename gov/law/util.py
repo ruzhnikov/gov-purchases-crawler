@@ -2,8 +2,6 @@
 # -*- coding: utf-8 -*-
 
 from lxml import etree
-from datetime import datetime
-from datetime import timezone
 
 
 def get_tag(tag):
@@ -78,4 +76,3 @@ def recursive_read_dict(element, skip_tags=(), tag_handlers={}):
         element_data = local_dict
 
     return tag, element_data
-
