@@ -1,4 +1,4 @@
-DROP TABLE IF EXISTS archives;
+DROP TABLE IF EXISTS archives CASCADE;
 CREATE TABLE archives (
     id SERIAL PRIMARY KEY,
     name VARCHAR(250) NOT NULL,
@@ -7,11 +7,11 @@ CREATE TABLE archives (
     downloaded_on TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT (NOW() AT TIME ZONE 'utc'),
     parsed_on TIMESTAMP WITHOUT TIME ZONE DEFAULT NULL,
     updated_on TIMESTAMP WITHOUT TIME ZONE DEFAULT NULL,
-    has_parsed boolean NOT NULL DEFAULT FALSE,
-    UNIQUE(name_with_path)
+    has_parsed boolean NOT NULL DEFAULT FALSE
+    -- UNIQUE(name_with_path)
 );
 
-DROP TABLE IF EXISTS archive_files;
+DROP TABLE IF EXISTS archive_files CASCADE;
 CREATE TABLE archive_files (
     id SERIAL PRIMARY KEY,
     archive_id INT REFERENCES archives (id) ON DELETE CASCADE,
@@ -23,9 +23,10 @@ CREATE TABLE archive_files (
     reason VARCHAR(250)
 );
 
+DROP SCHEMA IF EXISTS forty_fourth_law CASCADE;
 CREATE SCHEMA forty_fourth_law;
 
-DROP TABLE IF EXISTS forty_fourth_law.tags_to_fields_dict;
+DROP TABLE IF EXISTS forty_fourth_law.tags_to_fields_dict CASCADE;
 CREATE TABLE forty_fourth_law.tags_to_fields_dict (
     tag varchar(100),
     field varchar(150)
@@ -124,7 +125,7 @@ INSERT INTO forty_fourth_law.tags_to_fields_dict VALUES
     ('documentation', 'documentation'),
     ('prolongationInfo', 'prolongation_info');
 
-DROP TABLE IF EXISTS forty_fourth_law.notifications_often_tags;
+DROP TABLE IF EXISTS forty_fourth_law.notifications_often_tags CASCADE;
 CREATE TABLE forty_fourth_law.notifications_often_tags (
     id SERIAL PRIMARY KEY,
     archive_file_id INT REFERENCES archive_files (id) ON DELETE CASCADE,
@@ -165,7 +166,7 @@ CREATE TABLE forty_fourth_law.notifications_often_tags (
     note VARCHAR(500)
 );
 
-DROP TABLE IF EXISTS forty_fourth_law.notifications_rare_tags;
+DROP TABLE IF EXISTS forty_fourth_law.notifications_rare_tags CASCADE;
 CREATE TABLE forty_fourth_law.notifications_rare_tags (
     id SERIAL PRIMARY KEY,
     archive_file_id INT REFERENCES archive_files (id) ON DELETE CASCADE,
@@ -229,7 +230,7 @@ CREATE TABLE forty_fourth_law.notifications_rare_tags (
     note VARCHAR(500)
 );
 
-DROP TABLE IF EXISTS forty_fourth_law.notifications_unknown_tags;
+DROP TABLE IF EXISTS forty_fourth_law.notifications_unknown_tags CASCADE;
 CREATE TABLE forty_fourth_law.notifications_unknown_tags (
     id SERIAL PRIMARY KEY,
     archive_file_id INT REFERENCES archive_files (id) ON DELETE CASCADE,
