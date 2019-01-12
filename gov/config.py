@@ -26,8 +26,8 @@ class _BaseConfig():
 class DBConfig(_BaseConfig):
     """Config for working with database.
     """
-    _FIELDS = ("HOST", "USER", "PASSWORD", "NAME", "ECHO")
-    _REQUIRED = ("HOST", "USER", "PASSWORD", "NAME")
+    _FIELDS = ("HOST", "USER", "PASSWORD", "NAME", "ECHO", "PORT")
+    _REQUIRED = ("HOST", "USER", "PASSWORD", "NAME", "PORT")
     _PREFIX = "DB"
 
     def __init__(self):
@@ -55,6 +55,9 @@ class DBConfig(_BaseConfig):
     def echo(self):
         return self._CFG.get("echo")
 
+    @property
+    def port(self):
+        return self._CFG["port"]
 
 class AppConfig(_BaseConfig):
     """The main application config.

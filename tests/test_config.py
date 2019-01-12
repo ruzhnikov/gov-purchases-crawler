@@ -22,7 +22,8 @@ _PREDEFINED_CONFIG_FIELDS = {
         "user": "db_user",
         "password": "db_password",
         "name": "db_name",
-        "echo": "no"
+        "echo": "no",
+        "port": "5432"
     }
 }
 

@@ -31,7 +31,7 @@ class DBClient():
 
     def _connect(self):
         cfg = self._db_cfg
-        conn_str = f"postgresql://{cfg.user}:{cfg.password}@{cfg.host}/{cfg.name}"
+        conn_str = f"postgresql://{cfg.user}:{cfg.password}@{cfg.host}:{cfg.port}/{cfg.name}"
         engine_echo = True if self._app_cfg.mode == "dev" else False
         if self._db_cfg.echo is not None:
             engine_echo = self._db_cfg.echo == "yes"
