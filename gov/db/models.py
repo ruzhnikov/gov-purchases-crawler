@@ -82,7 +82,6 @@ class FFLNotificationOftenTags(_Base):
     abandoned_reason = sa.Column(JSONB, nullable=True)
     external_id = sa.Column(sa.String(40), nullable=True)
     contract_service_info = sa.Column(sa.String, nullable=True)
-    note = sa.Column(sa.String, nullable=True)
 
 
 class FFLNotificationRareTags(_Base):
@@ -148,7 +147,6 @@ class FFLNotificationRareTags(_Base):
     restrict_info = sa.Column(sa.String(20), nullable=True)
     documentation = sa.Column(JSONB, nullable=True)
     prolongation_info = sa.Column(JSONB, nullable=True)
-    note = sa.Column(sa.String, nullable=True)
 
 
 class FFLNotificationUnknownTags(_Base):
@@ -159,7 +157,6 @@ class FFLNotificationUnknownTags(_Base):
     archive_file_id = sa.Column(sa.Integer, sa.ForeignKey("archive_files.id"))
     name = sa.Column(sa.String(100), nullable=True)
     value = sa.Column(JSONB, nullable=True)
-    note = sa.Column(sa.String, nullable=True)
 
 
 class FFLTagsToFieldsDict(_Base):

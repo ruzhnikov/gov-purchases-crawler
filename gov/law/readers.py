@@ -58,8 +58,8 @@ class FortyFourthLawNotifications():
         """
 
         has_wrong_files = False
-        with ZipFile(archive, "r") as zip:
-            for entry in zip.infolist():
+        with ZipFile(archive, "r") as zip_file:
+            for entry in zip_file.infolist():
                 if not entry.filename.endswith(".xml"):
                     continue
 
@@ -78,7 +78,7 @@ class FortyFourthLawNotifications():
                     need_to_update = True
 
                 # read and handle file
-                with zip.open(fname, "r") as f:
+                with zip_file.open(fname, "r") as f:
                     xml = f.read()
 
                 if need_to_update:

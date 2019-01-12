@@ -2,13 +2,11 @@ DROP TABLE IF EXISTS archives CASCADE;
 CREATE TABLE archives (
     id SERIAL PRIMARY KEY,
     name VARCHAR(250) NOT NULL,
-    -- name_with_path VARCHAR(500) NOT NULL,
     size INT NOT NULL,
     downloaded_on TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT (NOW() AT TIME ZONE 'utc'),
     parsed_on TIMESTAMP WITHOUT TIME ZONE DEFAULT NULL,
     updated_on TIMESTAMP WITHOUT TIME ZONE DEFAULT NULL,
     has_parsed boolean NOT NULL DEFAULT FALSE
-    -- UNIQUE(name_with_path)
 );
 
 DROP TABLE IF EXISTS archive_files CASCADE;
@@ -162,8 +160,7 @@ CREATE TABLE forty_fourth_law.notifications_often_tags (
     direct_date TIMESTAMP WITH TIME ZONE,
     abandoned_reason JSONB,
     external_id VARCHAR(40),
-    contract_service_info TEXT,
-    note VARCHAR(500)
+    contract_service_info TEXT
 );
 
 DROP TABLE IF EXISTS forty_fourth_law.notifications_rare_tags CASCADE;
@@ -226,8 +223,7 @@ CREATE TABLE forty_fourth_law.notifications_rare_tags (
     purchase_objects JSONB,
     restrict_info VARCHAR(20),
     documentation JSONB,
-    prolongation_info JSONB,
-    note VARCHAR(500)
+    prolongation_info JSONB
 );
 
 DROP TABLE IF EXISTS forty_fourth_law.notifications_unknown_tags CASCADE;
@@ -235,6 +231,5 @@ CREATE TABLE forty_fourth_law.notifications_unknown_tags (
     id SERIAL PRIMARY KEY,
     archive_file_id INT REFERENCES archive_files (id) ON DELETE CASCADE,
     name VARCHAR(100),
-    value JSONB,
-    note VARCHAR(500)
+    value JSONB
 );

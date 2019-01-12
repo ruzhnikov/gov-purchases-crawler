@@ -172,6 +172,7 @@ class DBClient():
         file.xml_type = xml_type
         if session is None:
             sess.commit()
+            sess.close()
 
     def delete_archive_files(self, archive_id: int):
         sess = self.session()
