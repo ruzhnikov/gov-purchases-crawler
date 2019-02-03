@@ -43,8 +43,8 @@ class FortyFourthLawNotifications():
         """
         self.log.debug("Fill tag aliases")
 
-        self.__OFTEN_TAGS = {k: v for (k, v) in self.db.get_columns_dict(self.db.often_tags_table)}
-        self.__RARE_TAGS = {k: v for (k, v) in self.db.get_columns_dict(self.db.rare_tags_table)}
+        self.__OFTEN_TAGS = {k: v for (k, v) in self.db.get_columns_dict(self.db.notifications.often_tags_table)}
+        self.__RARE_TAGS = {k: v for (k, v) in self.db.get_columns_dict(self.db.notifications.rare_tags_table)}
         self.__SKIP_TAGS = ("cryptoSigns", "signature")
 
         self.log.debug("Done")
@@ -179,16 +179,17 @@ class FortyFourthLawNotifications():
         session = self.db.session()
         if len(often_data):
             often_data["archive_file_id"] = file_id
-            data = self.db.often_tags_table(**often_data)
+            data = self.db.notifications.often_tags_table(**often_data)
             session.add(data)
 
         if len(rare_data):
             rare_data["archive_file_id"] = file_id
-            data = self.db.rare_tags_table(**rare_data)
+            data = self.db.notifications.rare_tags_table(**rare_data)
             session.add(data)
 
         for local_data in unknown_data:
-            data = self.db.unknown_tags_table(archive_file_id=file_id, name=local_data[0], value=local_data[1])
+            data = self.db.notifications.unknown_tags_table(
+                archive_file_id=file_id, name=local_data[0], value=local_data[1])
             session.add(data)
 
         self.db.mark_archive_file_as_parsed(file_id, xml_type, reason=reason, session=session)
