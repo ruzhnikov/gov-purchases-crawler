@@ -6,14 +6,14 @@
 import sqlalchemy as sa
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import JSONB, ENUM
 
 
 _Base = declarative_base()
 
 
 class Archive(_Base):
-    """Table `archive`
+    """Table `archives`
     """
     __tablename__ = "archives"
 
@@ -23,6 +23,8 @@ class Archive(_Base):
     downloaded_on = sa.Column(sa.DateTime, nullable=False, server_default=sa.text("NOW() AT TIME ZONE 'utc'"))
     parsed_on = sa.Column(sa.DateTime, nullable=True)
     has_parsed = sa.Column(sa.Boolean, nullable=False, default=False)
+    law_number = sa.Column(ENUM("44", "223", name="law"), nullable=False, default="44")
+    folder_name = sa.Column(sa.String(100), nullable=False)
 
 
 class ArchiveFile(_Base):
@@ -149,7 +151,7 @@ class FFLNotificationRareTags(_Base):
     prolongation_info = sa.Column(JSONB, nullable=True)
 
 
-class FFLNotificationUnknownTags(_Base):
+class FFLNotificationsUnknownTags(_Base):
     __tablename__ = "notifications_unknown_tags"
     __table_args__ = ({"schema": "forty_fourth_law"})
 
@@ -165,3 +167,72 @@ class FFLTagsToFieldsDict(_Base):
 
     tag = sa.Column(sa.String(100), nullable=False, primary_key=True)
     field = sa.Column(sa.String(150), nullable=False, primary_key=True)
+
+class FFLProtocolsOftenTags(_Base):
+    __tablename__ = "protocols_often_tags"
+    __table_args__ = ({"schema": "forty_fourth_law"})
+
+    id = sa.Column(sa.Integer, primary_key=True)
+    href = sa.Column(sa.String, nullable=True)
+    print_form = sa.Column(JSONB, nullable=True)
+    purchase_number = sa.Column(sa.String(20), nullable=True)
+    protocol_number = sa.Column(sa.String(40), nullable=True)
+    place = sa.Column(sa.String, nullable=True)
+    protocol_date = sa.Column(sa.DATETIME, nullable=True)
+    publish_date = sa.Column(sa.DATETIME, nullable=True)
+    sign_date = sa.Column(sa.DATETIME, nullable=True)
+    protocol_publisher = sa.Column(JSONB, nullable=True)
+    protocol_lot = sa.Column(JSONB, nullable=True)
+    purchase_id = sa.Column(sa.String(20), nullable=True)
+    commission = sa.Column(JSONB, nullable=True)
+    foundation_protocol_number = sa.Column(sa.String(40), nullable=True)
+    attachments = sa.Column(JSONB, nullable=True)
+    external_id = sa.Column(sa.String(40), nullable=True)
+
+class FFLProtocolRareTags(_Base):
+    __tablename__ = "protocols_rare_tags"
+    __table_args__ = ({"schema": "forty_fourth_law"})
+
+    id = sa.Column(sa.Integer, primary_key=True)
+    direct_date = sa.Column(sa.DATETIME, nullable=True)
+    protocol_lots = sa.Column(JSONB, nullable=True)
+    parent_protocol_number = sa.Column(sa.String(40), nullable=True)
+    foundation_protocol = sa.Column(JSONB, nullable=True)
+    modification = sa.Column(JSONB, nullable=True)
+    doc_number = sa.Column(sa.String(40), nullable=True)
+    doc_publish_date = sa.Column(sa.DATETIME, nullable=True)
+    cancel_reason = sa.Column(JSONB, nullable=True)
+    purchase_info = sa.Column(JSONB, nullable=True)
+    foundation_protocol_name = sa.Column(sa.String(120), nullable=True)
+    abandoned_reason = sa.Column(JSONB, nullable=True)
+    commission_name = sa.Column(sa.String, nullable=True)
+    add_info = sa.Column(sa.String, nullable=True)
+    version_number = sa.Column(sa.String(20), nullable=True)
+    common_info = sa.Column(JSONB, nullable=True)
+    print_form_info = sa.Column(JSONB, nullable=True)
+    ext_print_form_info = sa.Column(JSONB, nullable=True)
+    protocol_publisher_info = sa.Column(JSONB, nullable=True)
+    protocol_info = sa.Column(JSONB, nullable=True)
+    doc_date = sa.Column(sa.DATETIME, nullable=True)
+    attachments_info = sa.Column(JSONB, nullable=True)
+    opening_protocol = sa.Column(JSONB, nullable=True)
+    commission_info = sa.Column(JSONB, nullable=True)
+    after_prolongation = sa.Column(sa.String(20), nullable=True)
+    purchase_object_info = sa.Column(sa.String(200), nullable=True)
+    purchase_responsible = sa.Column(JSONB, nullable=True)
+    placing_way = sa.Column(JSONB, nullable=True)
+    lot = sa.Column(JSONB, nullable=True)
+    revision_requisites_p_o2018 = sa.Column(sa.String(20), nullable=True)
+    foundation_doc_info = sa.Column(JSONB, nullable=True)
+    ext_print_form = sa.Column(JSONB, nullable=True)
+    modification_info = sa.Column(JSONB, nullable=True)
+
+
+class FFLProtocolsUnknownTags(_Base):
+    __tablename__ = "protocols_unknown_tags"
+    __table_args__ = ({"schema": "forty_fourth_law"})
+
+    id = sa.Column(sa.Integer, primary_key=True)
+    archive_file_id = sa.Column(sa.Integer, sa.ForeignKey("archive_files.id"))
+    name = sa.Column(sa.String(100), nullable=True)
+    value = sa.Column(JSONB, nullable=True)

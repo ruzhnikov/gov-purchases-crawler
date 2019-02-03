@@ -125,7 +125,26 @@ INSERT INTO forty_fourth_law.tags_to_fields_dict VALUES
     ('purchaseObjects', 'purchase_objects'),
     ('restrictInfo', 'restrict_info'),
     ('documentation', 'documentation'),
-    ('prolongationInfo', 'prolongation_info');
+    ('prolongationInfo', 'prolongation_info'),
+    ('protocolNumber', 'protocol_number'),
+    ('place', 'place'),
+    ('publishDate', 'publish_date'),
+    ('protocolPublisher', 'protocol_publisher'),
+    ('commission', 'commission'),
+    ('protocolLots', 'protocol_lots'),
+    ('parentProtocolNumber', 'parent_protocol_number'),
+    ('foundationProtocol', 'foundation_protocol'),
+    ('purchaseInfo', 'purchase_info'),
+    ('foundationProtocolName', 'foundation_protocol_name'),
+    ('commissionName', 'commission_name'),
+    ('extPrintFormInfo', 'ext_print_form_info'),
+    ('protocolPublisherInfo', 'protocol_publisher_info'),
+    ('protocolInfo', 'protocol_info'),
+    ('openingProtocol', 'opening_protocol'),
+    ('commissionInfo', 'commission_info'),
+    ('afterProlongation', 'after_prolongation'),
+    ('revisionRequisitesPO2018', 'revision_requisites_po2018'),
+    ('foundationDocInfo', 'foundation_doc_info');
 
 DROP TABLE IF EXISTS forty_fourth_law.notifications_often_tags CASCADE;
 CREATE TABLE forty_fourth_law.notifications_often_tags (
@@ -293,4 +312,12 @@ CREATE TABLE forty_fourth_law.protocols_rare_tags (
     foundation_doc_info JSONB,
     ext_print_form JSONB,
     modification_info JSONB
+);
+
+DROP TABLE IF EXISTS forty_fourth_law.protocols_unknown_tags CASCADE;
+CREATE TABLE forty_fourth_law.protocols_unknown_tags (
+    id SERIAL PRIMARY KEY,
+    archive_file_id INT REFERENCES archive_files (id) ON DELETE CASCADE,
+    name VARCHAR(100),
+    value JSONB
 );

@@ -97,20 +97,22 @@ class DBClient():
 
         return archive
 
-    def add_archive(self, fname: str, fsize: int) -> int:
-        """Добавляет информацию об архиве в БД. Возвращает ID новой записи.
+    def add_archive(self, fname: str, fsize: int, law_number: str, folder_name: str) -> int:
+        """Add information about archive to DB. Return ID of new record.
 
         Args:
-            fname (str): Имя файла.
-            fsize (int): Размер файла.
+            fname (str): File name.
+            fsize (int): File size.
+            law_number (str): Law number
+            folder_name (str): Folder name.
 
         Returns:
-            int: ID новой записи.
+            int: [description]
         """
 
         self.log.debug(f"Add info about a new archive {fname} to database")
         sess = self.session()
-        archive = models.Archive(name=fname, size=fsize)
+        archive = models.Archive(name=fname, size=fsize, law_number=law_number, folder_name=folder_name)
         sess.add(archive)
         sess.commit()
 
@@ -184,11 +186,12 @@ class DBClient():
 class FortyFourthLawDB(DBClient):
     """Class for working with DB of 44th law
     """
+
     def __init__(self):
         super().__init__()
         self.often_tags_table = models.FFLNotificationOftenTags
         self.rare_tags_table = models.FFLNotificationRareTags
-        self.unknown_tags_table = models.FFLNotificationUnknownTags
+        self.unknown_tags_table = models.FFLNotificationsUnknownTags
 
     def get_columns_dict(self, table) -> list:
         columns = sa.inspect(table).columns
@@ -204,7 +207,7 @@ class FortyFourthLawDB(DBClient):
         sess = self.session()
         for model in (models.FFLNotificationOftenTags,
                       models.FFLNotificationRareTags,
-                      models.FFLNotificationUnknownTags):
+                      models.FFLNotificationsUnknownTags):
             sess.query(model).filter(model.archive_file_id == file_id).delete()
         sess.commit()
         sess.close()
