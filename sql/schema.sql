@@ -1,3 +1,5 @@
+CREATE TYPE law AS ENUM ('44', '223');
+
 DROP TABLE IF EXISTS archives CASCADE;
 CREATE TABLE archives (
     id SERIAL PRIMARY KEY,
@@ -6,7 +8,9 @@ CREATE TABLE archives (
     downloaded_on TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT (NOW() AT TIME ZONE 'utc'),
     parsed_on TIMESTAMP WITHOUT TIME ZONE DEFAULT NULL,
     updated_on TIMESTAMP WITHOUT TIME ZONE DEFAULT NULL,
-    has_parsed boolean NOT NULL DEFAULT FALSE
+    has_parsed boolean NOT NULL DEFAULT FALSE,
+    law_number law NOT NULL DEFAULT '44',
+    folder_name VARCHAR(100)
 );
 
 DROP TABLE IF EXISTS archive_files CASCADE;
@@ -232,4 +236,61 @@ CREATE TABLE forty_fourth_law.notifications_unknown_tags (
     archive_file_id INT REFERENCES archive_files (id) ON DELETE CASCADE,
     name VARCHAR(100),
     value JSONB
+);
+
+DROP TABLE IF EXISTS forty_fourth_law.protocols_often_tags CASCADE;
+CREATE TABLE forty_fourth_law.protocols_often_tags (
+    id SERIAL PRIMARY KEY,
+    href TEXT,
+    print_form JSONB,
+    purchase_number VARCHAR(20),
+    protocol_number VARCHAR(40),
+    place TEXT,
+    protocol_date TIMESTAMP WITH TIME ZONE,
+    publish_date TIMESTAMP WITH TIME ZONE,
+    sign_date TIMESTAMP WITH TIME ZONE,
+    protocol_publisher JSONB,
+    protocol_lot JSONB,
+    purchase_id VARCHAR(20),
+    commission JSONB,
+    foundation_protocol_number VARCHAR(40),
+    attachments JSONB,
+    external_id VARCHAR(40)
+);
+
+DROP TABLE IF EXISTS forty_fourth_law.protocols_rare_tags CASCADE;
+CREATE TABLE forty_fourth_law.protocols_rare_tags (
+    id SERIAL PRIMARY KEY,
+    direct_date TIMESTAMP WITH TIME ZONE,
+    protocol_lots JSONB,
+    parent_protocol_number VARCHAR(40),
+    foundation_protocol JSONB,
+    modification JSONB,
+    doc_number VARCHAR(40),
+    doc_publish_date TIMESTAMP WITH TIME ZONE,
+    cancel_reason JSONB,
+    purchase_info JSONB,
+    foundation_protocol_name VARCHAR(120),
+    abandoned_reason JSONB,
+    commission_name TEXT,
+    add_info TEXT,
+    version_number VARCHAR(20),
+    common_info JSONB,
+    print_form_info JSONB,
+    ext_print_form_info JSONB,
+    protocol_publisher_info JSONB,
+    protocol_info JSONB,
+    doc_date TIMESTAMP WITH TIME ZONE,
+    attachments_info JSONB,
+    opening_protocol JSONB,
+    commission_info JSONB,
+    after_prolongation VARCHAR(20),
+    purchase_object_info VARCHAR(200),
+    purchase_responsible JSONB,
+    placing_way JSONB,
+    lot JSONB,
+    revision_requisites_po2018 VARCHAR(20),
+    foundation_doc_info JSONB,
+    ext_print_form JSONB,
+    modification_info JSONB
 );
