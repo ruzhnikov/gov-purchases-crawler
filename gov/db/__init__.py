@@ -10,6 +10,7 @@ from datetime import datetime as dt
 from ..log import get_logger
 from ..config import DBConfig, AppConfig
 from . import models
+from . import _fourty_forth_law_model as ffl_model
 
 
 class DBClient():
@@ -187,27 +188,45 @@ class FortyFourthLawDB(DBClient):
     """Class for working with DB of 44th law
     """
 
+    class _Notifications():
+        def __init__(self):
+            self.often_tags_table = ffl_model.FFLNotificationOftenTags
+            self.rare_tags_table = ffl_model.FFLNotificationRareTags
+            self.unknown_tags_table = ffl_model.FFLNotificationsUnknownTags
+
+    class _Protocols():
+        def __init__(self):
+            self.often_tags_table = ffl_model.FFLProtocolsOftenTags
+            self.rare_tags_table = ffl_model.FFLProtocolRareTags
+            self.unknown_tags_table = ffl_model.FFLProtocolsUnknownTags
+
     def __init__(self):
         super().__init__()
-        self.often_tags_table = models.FFLNotificationOftenTags
-        self.rare_tags_table = models.FFLNotificationRareTags
-        self.unknown_tags_table = models.FFLNotificationsUnknownTags
+        self.often_tags_table = ffl_model.FFLNotificationOftenTags
+        self.rare_tags_table = ffl_model.FFLNotificationRareTags
+        self.unknown_tags_table = ffl_model.FFLNotificationsUnknownTags
+        self.protocols = self._Protocols()
+        self.notifications = self._Notifications()
 
     def get_columns_dict(self, table) -> list:
         columns = sa.inspect(table).columns
 
         sess = self.session()
-        for row in sess.query(models.FFLTagsToFieldsDict).all():
+        for row in sess.query(ffl_model.FFLTagsToFieldsDict).all():
             if columns.has_key(row.field):
                 yield row.tag, row.field
 
         sess.close()
 
     def delete_file_tags(self, file_id: int):
+        """Delete all rows related with file_id from all forty_fourth_law.* tables
+        
+        Args:
+            file_id (int): ID of XML file.
+        """
         sess = self.session()
-        for model in (models.FFLNotificationOftenTags,
-                      models.FFLNotificationRareTags,
-                      models.FFLNotificationsUnknownTags):
-            sess.query(model).filter(model.archive_file_id == file_id).delete()
+        for model in (self.notifications, self.protocols):
+            for table in (model.often_tags_table, model.rare_tags_table, model.unknown_tags_table):
+                sess.query(table).filter(table.archive_file_id == file_id).delete()
         sess.commit()
         sess.close()
