@@ -260,6 +260,7 @@ CREATE TABLE forty_fourth_law.notifications_unknown_tags (
 DROP TABLE IF EXISTS forty_fourth_law.protocols_often_tags CASCADE;
 CREATE TABLE forty_fourth_law.protocols_often_tags (
     id SERIAL PRIMARY KEY,
+    archive_file_id INT REFERENCES archive_files (id) ON DELETE CASCADE,
     href TEXT,
     print_form JSONB,
     purchase_number VARCHAR(20),
@@ -280,6 +281,7 @@ CREATE TABLE forty_fourth_law.protocols_often_tags (
 DROP TABLE IF EXISTS forty_fourth_law.protocols_rare_tags CASCADE;
 CREATE TABLE forty_fourth_law.protocols_rare_tags (
     id SERIAL PRIMARY KEY,
+    archive_file_id INT REFERENCES archive_files (id) ON DELETE CASCADE,
     direct_date TIMESTAMP WITH TIME ZONE,
     protocol_lots JSONB,
     parent_protocol_number VARCHAR(40),
