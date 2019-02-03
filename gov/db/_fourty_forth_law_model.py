@@ -10,6 +10,8 @@ _Base = declarative_base()
 
 
 class FFLNotificationOftenTags(_Base):
+    """Table `forty_fourth_law.notifications_often_tags`"""
+
     __tablename__ = "notifications_often_tags"
     __table_args__ = ({"schema": "forty_fourth_law"})
 
@@ -52,6 +54,8 @@ class FFLNotificationOftenTags(_Base):
 
 
 class FFLNotificationRareTags(_Base):
+    """Table `forty_fourth_law.notifications_rare_tags`"""
+
     __tablename__ = "notifications_rare_tags"
     __table_args__ = ({"schema": "forty_fourth_law"})
 
@@ -117,6 +121,8 @@ class FFLNotificationRareTags(_Base):
 
 
 class FFLNotificationsUnknownTags(_Base):
+    """Table `forty_fourth_law.notifications_unknown_tags`"""
+
     __tablename__ = "notifications_unknown_tags"
     __table_args__ = ({"schema": "forty_fourth_law"})
 
@@ -127,6 +133,8 @@ class FFLNotificationsUnknownTags(_Base):
 
 
 class FFLTagsToFieldsDict(_Base):
+    """Table `forty_fourth_law.tags_to_fields_dict`"""
+
     __tablename__ = "tags_to_fields_dict"
     __table_args__ = ({"schema": "forty_fourth_law"})
 
@@ -135,6 +143,8 @@ class FFLTagsToFieldsDict(_Base):
 
 
 class FFLProtocolsOftenTags(_Base):
+    """Table `forty_fourth_law.protocols_often_tags`"""
+
     __tablename__ = "protocols_often_tags"
     __table_args__ = ({"schema": "forty_fourth_law"})
 
@@ -158,6 +168,8 @@ class FFLProtocolsOftenTags(_Base):
 
 
 class FFLProtocolRareTags(_Base):
+    """Table `forty_fourth_law.protocols_rare_tags`"""
+
     __tablename__ = "protocols_rare_tags"
     __table_args__ = ({"schema": "forty_fourth_law"})
 
@@ -198,6 +210,8 @@ class FFLProtocolRareTags(_Base):
 
 
 class FFLProtocolsUnknownTags(_Base):
+    """Table `forty_fourth_law.protocols_unknown_tags`"""
+
     __tablename__ = "protocols_unknown_tags"
     __table_args__ = ({"schema": "forty_fourth_law"})
 

@@ -189,12 +189,16 @@ class FortyFourthLawDB(DBClient):
     """
 
     class _Notifications():
+        """Wrapper around notification_* tables"""
+
         def __init__(self):
             self.often_tags_table = ffl_model.FFLNotificationOftenTags
             self.rare_tags_table = ffl_model.FFLNotificationRareTags
             self.unknown_tags_table = ffl_model.FFLNotificationsUnknownTags
 
     class _Protocols():
+        """Wrapper around protocols_* tables"""
+
         def __init__(self):
             self.often_tags_table = ffl_model.FFLProtocolsOftenTags
             self.rare_tags_table = ffl_model.FFLProtocolRareTags
@@ -202,9 +206,6 @@ class FortyFourthLawDB(DBClient):
 
     def __init__(self):
         super().__init__()
-        self.often_tags_table = ffl_model.FFLNotificationOftenTags
-        self.rare_tags_table = ffl_model.FFLNotificationRareTags
-        self.unknown_tags_table = ffl_model.FFLNotificationsUnknownTags
         self.protocols = self._Protocols()
         self.notifications = self._Notifications()
 
@@ -220,7 +221,7 @@ class FortyFourthLawDB(DBClient):
 
     def delete_file_tags(self, file_id: int):
         """Delete all rows related with file_id from all forty_fourth_law.* tables
-        
+
         Args:
             file_id (int): ID of XML file.
         """
