@@ -19,42 +19,56 @@ _REASONS = {
 }
 
 
-class FortyFourthLawNotifications():
-    """Handler of 'notifications' folder of 44th law
-    """
+class _FortyFourthLawBase():
+    """The base class for 44th law readers"""
 
-    __OFTEN_TAGS = {}
-    __RARE_TAGS = {}
-    __TAG_HANDLERS = {}
-    __SKIP_TAGS = ()
+    _TAG_HANDLERS = {}
+    _SKIP_TAGS = ()
 
     def __init__(self):
         self.log = get_logger(__name__)
         self.db = FortyFourthLawDB()
-        self._register_tags()
         self._files = {}
 
-    def _parse_tag_data(self, elem, tags_dict: dict) -> tuple:
-        tag, elem_data = util.recursive_read_dict(elem, skip_tags=self.__SKIP_TAGS, tag_handlers=self.__TAG_HANDLERS)
-        return tags_dict[tag], elem_data
+    def _register_tags(self, db_namespace):
+        """Register tags in local storage"""
 
-    def _register_tags(self):
-        """Register tags
-        """
         self.log.debug("Fill tag aliases")
-
-        self.__OFTEN_TAGS = {k: v for (k, v) in self.db.get_columns_dict(self.db.notifications.often_tags_table)}
-        self.__RARE_TAGS = {k: v for (k, v) in self.db.get_columns_dict(self.db.notifications.rare_tags_table)}
-        self.__SKIP_TAGS = ("cryptoSigns", "signature")
-
+        self._OFTEN_TAGS = {k: v for (k, v) in self.db.get_columns_dict(db_namespace.often_tags_table)}
+        self._RARE_TAGS = {k: v for (k, v) in self.db.get_columns_dict(db_namespace.rare_tags_table)}
         self.log.debug("Done")
 
+    def _parse_tag_data(self, elem, tags_dict: dict) -> tuple:
+        tag, elem_data = util.recursive_read_dict(elem, skip_tags=self._SKIP_TAGS, tag_handlers=self._TAG_HANDLERS)
+        return tags_dict[tag], elem_data
+
+    def _has_archive_file(self, archive_id: int, fname: str, fsize: int) -> bool:
+        file_status = self.db.get_archive_file_status(archive_id, fname, fsize)
+        if file_status == self.db.FILE_STATUS["FILE_DOES_NOT_EXIST"]:
+            return False
+        elif file_status == self.db.FILE_STATUS["FILE_EXISTS"]:
+            return True
+        elif file_status == self.db.FILE_STATUS["FILE_EXISTS_BUT_NOT_PARSED"]:
+            self._files[fname] = _FILE_EXISTS_BUT_NOT_PARSED
+            return True
+        elif file_status == self.db.FILE_STATUS["FILE_EXISTS_BUT_SIZE_DIFFERENT"]:
+            self._files[fname] = _FILE_EXISTS_BUT_SIZE_DIFFERENT
+            return True
+
+        return False
+
+    def _need_to_update_file(self, fname: str) -> bool:
+        if fname not in self._files:
+            return False
+
+        return True
+
     def handle_archive(self, archive: str, archive_id: int):
-        """Обработка архива. Чтение, парсинг и запись в БД
+        """Handling of archive. Read, parse and write to DB
 
         Args:
-            archive (str): Имя файла с архивом.
-            archive_id (int): ID архива в БД.
+            archive (str): Name of archive file.
+            archive_id (int): ID of archive in DB.
         """
 
         has_wrong_files = False
@@ -109,26 +123,21 @@ class FortyFourthLawNotifications():
         else:
             self.db.mark_archive_as_parsed(archive_id)
 
-    def _has_archive_file(self, archive_id: int, fname: str, fsize: int) -> bool:
-        file_status = self.db.get_archive_file_status(archive_id, fname, fsize)
-        if file_status == self.db.FILE_STATUS["FILE_DOES_NOT_EXIST"]:
-            return False
-        elif file_status == self.db.FILE_STATUS["FILE_EXISTS"]:
-            return True
-        elif file_status == self.db.FILE_STATUS["FILE_EXISTS_BUT_NOT_PARSED"]:
-            self._files[fname] = _FILE_EXISTS_BUT_NOT_PARSED
-            return True
-        elif file_status == self.db.FILE_STATUS["FILE_EXISTS_BUT_SIZE_DIFFERENT"]:
-            self._files[fname] = _FILE_EXISTS_BUT_SIZE_DIFFERENT
-            return True
+    def _parse_and_upload_xml(self, *arg, **kwarg):
+        raise NotImplementedError
 
-        return False
 
-    def _need_to_update_file(self, fname: str) -> bool:
-        if fname not in self._files:
-            return False
+class FortyFourthLawNotifications(_FortyFourthLawBase):
+    """Handler of 'notifications' folder of 44th law
+    """
 
-        return True
+    _TAG_HANDLERS = {}
+    _SKIP_TAGS = ("cryptoSigns", "signature")
+
+    def __init__(self):
+        super().__init__()
+        self._db_namespace = self.db.notifications
+        self._register_tags(self._db_namespace)
 
     def _parse_and_upload_xml(self, xml: bytes, file_id: int, reason=None):
         """Parse XML file. Upload its data to DB.
@@ -152,11 +161,11 @@ class FortyFourthLawNotifications():
             tags_dict = None
             local_data_storage = None
 
-            if tag_name in self.__OFTEN_TAGS:
-                tags_dict = self.__OFTEN_TAGS
+            if tag_name in self._OFTEN_TAGS:
+                tags_dict = self._OFTEN_TAGS
                 local_data_storage = often_data
-            elif tag_name in self.__RARE_TAGS:
-                tags_dict = self.__RARE_TAGS
+            elif tag_name in self._RARE_TAGS:
+                tags_dict = self._RARE_TAGS
                 local_data_storage = rare_data
             else:
                 self.log.warning(f"Unknown element {tag_name}")
@@ -195,3 +204,18 @@ class FortyFourthLawNotifications():
         self.db.mark_archive_file_as_parsed(file_id, xml_type, reason=reason, session=session)
         session.commit()
         session.close()
+
+
+class FortyFourthLawProtocols(_FortyFourthLawBase):
+    """Handler of `protocols` folder of 44th law"""
+
+    _TAG_HANDLERS = {}
+    _SKIP_TAGS = ("cryptoSigns", "signature")
+
+    def __init__(self):
+        super().__init__()
+        self._db_namespace = self.db.protocols
+        self._register_tags(self._db_namespace)
+
+    def _parse_and_upload_xml(self, xml: bytes, file_id: int, reason=None):
+        pass
