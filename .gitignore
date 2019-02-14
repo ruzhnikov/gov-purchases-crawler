@@ -6,7 +6,10 @@ dist
 *egg-info
 tmp
 *.txt
+!requirements.txt
 env.inc
 docker
 .pytest_cache
 .eggs
+cfg/*
+!cfg/app.example.yaml
