@@ -50,16 +50,32 @@ class ItIsJustDBInterfaceError(Error):
         self.message = f"The method {name} has to be realised in a child class"
         self.name = name
 
+
 class LostConfigFieldError(Error):
     """В конфиге отсутствует поле.
-    
+
     Args:
         name (str): Имя поля.
-    
+
     Attributes:
         message (str): Сообщение об ошибке.
         name (str): Имя поля.
     """
+
     def __init__(self, name):
         self.message = f"The value of {name} isn't defined in config or ENV"
         self.name = name
+
+
+class LostConfig(Error):
+    """There is no config file
+
+        Args:
+            message(str): Error message.
+
+        Attributes:
+            message(str): Error message.
+    """
+
+    def __init__(self, message):
+        self.message = message
