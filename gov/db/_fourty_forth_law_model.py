@@ -2,21 +2,20 @@
 # -*- coding: utf-8 -*-
 
 import sqlalchemy as sa
-from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.dialects.postgresql import JSONB
+from .base import Base
+from .models import ArchiveFile
 
 
-_Base = declarative_base()
 
-
-class FFLNotificationOftenTags(_Base):
+class FFLNotificationOftenTags(Base):
     """Table `forty_fourth_law.notifications_often_tags`"""
 
     __tablename__ = "notifications_often_tags"
     __table_args__ = ({"schema": "forty_fourth_law"})
 
     id = sa.Column(sa.Integer, primary_key=True)
-    archive_file_id = sa.Column(sa.Integer, sa.ForeignKey("archive_files.id"))
+    archive_file_id = sa.Column(sa.Integer, sa.ForeignKey(ArchiveFile.id))
     purchase_number = sa.Column(sa.String(20), nullable=True)
     purchase_id = sa.Column(sa.INT, nullable=True)
     doc_publish_date = sa.Column(sa.DATETIME, nullable=True)
@@ -53,14 +52,14 @@ class FFLNotificationOftenTags(_Base):
     contract_service_info = sa.Column(sa.String, nullable=True)
 
 
-class FFLNotificationRareTags(_Base):
+class FFLNotificationRareTags(Base):
     """Table `forty_fourth_law.notifications_rare_tags`"""
 
     __tablename__ = "notifications_rare_tags"
     __table_args__ = ({"schema": "forty_fourth_law"})
 
     id = sa.Column(sa.Integer, primary_key=True)
-    archive_file_id = sa.Column(sa.Integer, sa.ForeignKey("archive_files.id"))
+    archive_file_id = sa.Column(sa.Integer, sa.ForeignKey(ArchiveFile.id))
     modification = sa.Column(JSONB, nullable=True)
     topic = sa.Column(sa.String, nullable=True)
     request_number = sa.Column(sa.String(40), nullable=True)
@@ -120,19 +119,19 @@ class FFLNotificationRareTags(_Base):
     prolongation_info = sa.Column(JSONB, nullable=True)
 
 
-class FFLNotificationsUnknownTags(_Base):
+class FFLNotificationsUnknownTags(Base):
     """Table `forty_fourth_law.notifications_unknown_tags`"""
 
     __tablename__ = "notifications_unknown_tags"
     __table_args__ = ({"schema": "forty_fourth_law"})
 
     id = sa.Column(sa.Integer, primary_key=True)
-    archive_file_id = sa.Column(sa.Integer, sa.ForeignKey("archive_files.id"))
+    archive_file_id = sa.Column(sa.Integer, sa.ForeignKey(ArchiveFile.id))
     name = sa.Column(sa.String(100), nullable=True)
     value = sa.Column(JSONB, nullable=True)
 
 
-class FFLTagsToFieldsDict(_Base):
+class FFLTagsToFieldsDict(Base):
     """Table `forty_fourth_law.tags_to_fields_dict`"""
 
     __tablename__ = "tags_to_fields_dict"
@@ -142,14 +141,14 @@ class FFLTagsToFieldsDict(_Base):
     field = sa.Column(sa.String(150), nullable=False, primary_key=True)
 
 
-class FFLProtocolsOftenTags(_Base):
+class FFLProtocolsOftenTags(Base):
     """Table `forty_fourth_law.protocols_often_tags`"""
 
     __tablename__ = "protocols_often_tags"
     __table_args__ = ({"schema": "forty_fourth_law"})
 
     id = sa.Column(sa.Integer, primary_key=True)
-    archive_file_id = sa.Column(sa.Integer, sa.ForeignKey("archive_files.id"))
+    archive_file_id = sa.Column(sa.Integer, sa.ForeignKey(ArchiveFile.id))
     href = sa.Column(sa.String, nullable=True)
     print_form = sa.Column(JSONB, nullable=True)
     purchase_number = sa.Column(sa.String(20), nullable=True)
@@ -167,14 +166,14 @@ class FFLProtocolsOftenTags(_Base):
     external_id = sa.Column(sa.String(40), nullable=True)
 
 
-class FFLProtocolRareTags(_Base):
+class FFLProtocolRareTags(Base):
     """Table `forty_fourth_law.protocols_rare_tags`"""
 
     __tablename__ = "protocols_rare_tags"
     __table_args__ = ({"schema": "forty_fourth_law"})
 
     id = sa.Column(sa.Integer, primary_key=True)
-    archive_file_id = sa.Column(sa.Integer, sa.ForeignKey("archive_files.id"))
+    archive_file_id = sa.Column(sa.Integer, sa.ForeignKey(ArchiveFile.id))
     direct_date = sa.Column(sa.DATETIME, nullable=True)
     protocol_lots = sa.Column(JSONB, nullable=True)
     parent_protocol_number = sa.Column(sa.String(40), nullable=True)
@@ -203,19 +202,19 @@ class FFLProtocolRareTags(_Base):
     purchase_responsible = sa.Column(JSONB, nullable=True)
     placing_way = sa.Column(JSONB, nullable=True)
     lot = sa.Column(JSONB, nullable=True)
-    revision_requisites_p_o2018 = sa.Column(sa.String(20), nullable=True)
+    revision_requisites_po2018 = sa.Column(sa.String(20), nullable=True)
     foundation_doc_info = sa.Column(JSONB, nullable=True)
     ext_print_form = sa.Column(JSONB, nullable=True)
     modification_info = sa.Column(JSONB, nullable=True)
 
 
-class FFLProtocolsUnknownTags(_Base):
+class FFLProtocolsUnknownTags(Base):
     """Table `forty_fourth_law.protocols_unknown_tags`"""
 
     __tablename__ = "protocols_unknown_tags"
     __table_args__ = ({"schema": "forty_fourth_law"})
 
     id = sa.Column(sa.Integer, primary_key=True)
-    archive_file_id = sa.Column(sa.Integer, sa.ForeignKey("archive_files.id"))
+    archive_file_id = sa.Column(sa.Integer, sa.ForeignKey(ArchiveFile.id))
     name = sa.Column(sa.String(100), nullable=True)
     value = sa.Column(JSONB, nullable=True)

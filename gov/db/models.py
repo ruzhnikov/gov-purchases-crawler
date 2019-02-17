@@ -7,12 +7,10 @@ import sqlalchemy as sa
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.dialects.postgresql import ENUM
+from .base import Base
 
 
-_Base = declarative_base()
-
-
-class Archive(_Base):
+class Archive(Base):
     """Table `archives`
     """
     __tablename__ = "archives"
@@ -27,7 +25,7 @@ class Archive(_Base):
     folder_name = sa.Column(sa.String(100), nullable=False)
 
 
-class ArchiveFile(_Base):
+class ArchiveFile(Base):
     """Table `archive_files`
     """
     __tablename__ = "archive_files"

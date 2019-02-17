@@ -8,7 +8,7 @@ import sqlalchemy as sa
 from sqlalchemy.orm import sessionmaker, aliased, relationship
 from datetime import datetime as dt
 from ..log import get_logger
-from ..config import conf
+from ..config import conf, is_production
 from . import models
 from . import _fourty_forth_law_model as ffl_model
 
@@ -30,9 +30,8 @@ class DBClient():
 
     def _connect(self):
         cfg = conf("db")
-        app_cfg = conf("app")
         conn_str = f"postgresql://{cfg['user']}:{cfg['password']}@{cfg['host']}:{cfg['port']}/{cfg['name']}"
-        engine_echo = True if app_cfg["mode"] == "dev" else False
+        engine_echo = not is_production()
         if cfg["echo"] is not None:
             engine_echo = cfg["echo"] == True
 
