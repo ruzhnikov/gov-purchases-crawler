@@ -6,14 +6,7 @@ from lxml import etree
 from ..db import FortyFourthLawDB
 from ..log import get_logger
 from . import util
-
-
-_FILE_EXISTS_BUT_NOT_PARSED = 1
-_FILE_EXISTS_BUT_SIZE_DIFFERENT = 2
-_REASONS = {
-    _FILE_EXISTS_BUT_NOT_PARSED: "File was upload early, but not parsed yet",
-    _FILE_EXISTS_BUT_SIZE_DIFFERENT: "File was upload and parsed early, but current size of file is different"
-}
+from . import _REASONS, _REASON_CODES
 
 
 class _FortyFourthLawBase():
@@ -46,10 +39,10 @@ class _FortyFourthLawBase():
         elif file_status == self.db.FILE_STATUS["FILE_EXISTS"]:
             return True
         elif file_status == self.db.FILE_STATUS["FILE_EXISTS_BUT_NOT_PARSED"]:
-            self._files[fname] = _FILE_EXISTS_BUT_NOT_PARSED
+            self._files[fname] = _REASON_CODES["FILE_EXISTS_BUT_NOT_PARSED"]
             return True
         elif file_status == self.db.FILE_STATUS["FILE_EXISTS_BUT_SIZE_DIFFERENT"]:
-            self._files[fname] = _FILE_EXISTS_BUT_SIZE_DIFFERENT
+            self._files[fname] = _REASON_CODES["FILE_EXISTS_BUT_SIZE_DIFFERENT"]
             return True
 
         return False
@@ -95,12 +88,12 @@ class _FortyFourthLawBase():
                 if need_to_update:
                     file = self.db.get_archive_file(archive_id, fname, fsize)
                     file_id = file.id
-                    reason = self._files[fname]
+                    reason_code = self._files[fname]
 
                     # we should clean old tags of file
-                    if reason == _FILE_EXISTS_BUT_SIZE_DIFFERENT:
+                    if reason_code == _REASON_CODES["FILE_EXISTS_BUT_SIZE_DIFFERENT"]:
                         self.db.delete_file_tags(file_id)
-                    reason = _REASONS[reason]
+                    reason = _REASONS[reason_code]
                 else:
                     file_id = self.db.add_archive_file(archive_id, fname, fsize)
 

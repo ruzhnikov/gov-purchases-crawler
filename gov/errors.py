@@ -35,39 +35,7 @@ class EmptyDownloadDirError(Error):
         self.message = "There is no folder to download file from ftp"
 
 
-class ItIsJustDBInterfaceError(Error):
-    """Попытка вызвать метод интерфейса БД, который не был реализован в дочернем классе.
-
-    Args:
-        name (str): Имя метода.
-
-    Attributes:
-        message (str): Сообщение об ошибке.
-        name (str): Имя метода.
-    """
-
-    def __init__(self, name):
-        self.message = f"The method {name} has to be realised in a child class"
-        self.name = name
-
-
-class LostConfigFieldError(Error):
-    """В конфиге отсутствует поле.
-
-    Args:
-        name (str): Имя поля.
-
-    Attributes:
-        message (str): Сообщение об ошибке.
-        name (str): Имя поля.
-    """
-
-    def __init__(self, name):
-        self.message = f"The value of {name} isn't defined in config or ENV"
-        self.name = name
-
-
-class LostConfig(Error):
+class LostConfigError(Error):
     """There is no config file
 
         Args:
