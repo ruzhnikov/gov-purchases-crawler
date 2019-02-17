@@ -2,19 +2,19 @@
 # -*- coding: utf-8 -*-
 
 import logging
-from .config import AppConfig
+from .config import conf
 
 
 _DEFAULT_LOGGER_NAME = "Crawler"
 _LOG_FORMAT = "%(asctime)s | %(levelname)s | %(process)d | " \
     "%(filename)s:%(lineno)s | %(message)s"
-cfg = AppConfig()
+cfg = conf("app")
 
 
 def get_logger(name=_DEFAULT_LOGGER_NAME, use_async=False):
-    """Возвращает объект логгера"""
+    """Logger object"""
 
     logger_name = "asyncio" if use_async else name
-    logging.basicConfig(format=_LOG_FORMAT, level=cfg.log.level)
+    logging.basicConfig(format=_LOG_FORMAT, level=cfg["log"]["level"])
 
     return logging.getLogger(logger_name)

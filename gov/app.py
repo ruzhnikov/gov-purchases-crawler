@@ -6,7 +6,7 @@ from .log import get_logger
 from .purchases import Client
 from .db import DBClient
 from .law.readers import FortyFourthLawNotifications
-from .config import AppConfig
+from .config import conf
 
 
 _ARCHIVE_EXISTS_BUT_NOT_PARSED = 1
@@ -19,7 +19,6 @@ class _Application():
         self.log = get_logger(__name__)
         self.db = DBClient()
         self.ffl = FortyFourthLawNotifications()
-        self.cfg = AppConfig()
         self._archives = {}
 
     def _has_archive(self, finfo: dict) -> bool:
@@ -76,7 +75,8 @@ class _Application():
         """
 
         self.log.info(f"Archive file: {finfo['fname']}; Size: {finfo['fsize']}")
-        zip_file = self.cfg.tmp_folder + "/" + finfo["fname"]
+        cfg = conf("app")
+        zip_file = cfg["tmp_folder"] + "/" + finfo["fname"]
         self.ffl.handle_archive(zip_file, finfo["id"])
 
         # clean after work
@@ -91,14 +91,15 @@ class _Application():
     def run(self):
         """General method. Running, read and handle archives"""
 
-        server = Client(self.cfg.ftp_server, download_dir=self.cfg.tmp_folder)
+        cfg = conf("app")
+        server = Client(cfg["ftp_server"], download_dir=cfg["tmp_folder"])
 
         # We can handle particular amount of archives.
         # This parameter is set by config.
         count = 0
         error_count = 0
-        need_limit = self.cfg.limit_archives is not None
-        limit = self.cfg.limit_archives if need_limit else None
+        need_limit = cfg["limit_archives"] != 0
+        limit = cfg["limit_archives"] if need_limit else None
 
         self.log.info(f"Limit is {limit}")
 
@@ -125,14 +126,17 @@ class _Application():
             try:
                 server.download(fdict["full_name"], fdict["fname"])
             except Exception as e:
-                # TODO: here we should catch exception of "time is over" and reconnect to server
+                # TODO: here we should catch exception "time is over" and reconnect to server
                 self.log.error(f"Error to download archive: {e}")
                 error_count += 1
                 self.log.info("Try to next iteration")
                 continue
 
             if archive_id is None:
-                archive_id = self.db.add_archive(fname=fdict["fname"], fsize=fdict["fsize"])
+                archive_id = self.db.add_archive(
+                    fname=fdict["fname"],
+                    fsize=fdict["fsize"],
+                    law_number=cfg["law_number"], folder_name=cfg["server_folder_name"])
 
             fdict["id"] = archive_id
             self._handle_archive(fdict)

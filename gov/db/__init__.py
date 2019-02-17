@@ -8,7 +8,7 @@ import sqlalchemy as sa
 from sqlalchemy.orm import sessionmaker, aliased, relationship
 from datetime import datetime as dt
 from ..log import get_logger
-from ..config import DBConfig, AppConfig
+from ..config import conf
 from . import models
 from . import _fourty_forth_law_model as ffl_model
 
@@ -26,16 +26,15 @@ class DBClient():
 
     def __init__(self):
         self.log = get_logger(__name__)
-        self._app_cfg = AppConfig()
-        self._db_cfg = DBConfig()
         self._connect()
 
     def _connect(self):
-        cfg = self._db_cfg
-        conn_str = f"postgresql://{cfg.user}:{cfg.password}@{cfg.host}:{cfg.port}/{cfg.name}"
-        engine_echo = True if self._app_cfg.mode == "dev" else False
-        if self._db_cfg.echo is not None:
-            engine_echo = self._db_cfg.echo == "yes"
+        cfg = conf("db")
+        app_cfg = conf("app")
+        conn_str = f"postgresql://{cfg['user']}:{cfg['password']}@{cfg['host']}:{cfg['port']}/{cfg['name']}"
+        engine_echo = True if app_cfg["mode"] == "dev" else False
+        if cfg["echo"] is not None:
+            engine_echo = cfg["echo"] == True
 
         engine = sa.create_engine(conn_str, echo=engine_echo)
         self.session = sessionmaker(bind=engine)

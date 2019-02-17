@@ -1,160 +1,143 @@
 
 # -*- coding: utf-8 -*-
 
+"""Config module"""
+
+
 import os
 import argparse
-from .errors import LostConfigFieldError
+import yaml
+from .errors import LostConfig
 
 
-_CONFIG = {
-    "__parsed_env": False,
-    "__checked": False
-}
+_ENV_FILE_CONFIG_NAME = "APP_CONFIG_FILE"
+_ENV_SERVER_MODE = "APP_SERVER_MODE"
+_ARG_FILE_CONFIG_NAME = "config_file"
+_ARG_LIMIT_ARCHIVES_NAME = "limit_archives"
+_ARG_SERVER_FOLDER_NAME = "server_folder_name"
+_ARG_LAW_NUMBER = "law_number"
+_ARG_SERVER_MODE = "mode"
+_AVAILABLE_MODES = ("dev", "prod")
+_DEFAULT_APP_MODE = "dev"
+_DEFAULT_LAW_NUMBER = "44"
 
 
-class _BaseConfig():
-    _FIELDS = ()
-    _REQUIRED = _FIELDS
-    _PREFIX = None
-    _CFG = {}
-
-    def __init__(self):
-        _read_config()
-        self._CFG = _CONFIG[self._PREFIX]
+_cached_config = {}
 
 
-class DBConfig(_BaseConfig):
-    """Config for working with database.
+def _load_conf():
+    args = _read_args()
+
+    if _ENV_FILE_CONFIG_NAME in os.environ:
+        cfg_file = os.environ[_ENV_FILE_CONFIG_NAME]
+    else:
+        cfg_file = args[_ARG_FILE_CONFIG_NAME] if _ARG_FILE_CONFIG_NAME in args else None
+
+    if cfg_file is None:
+        raise LostConfig("Do you forget give config file? Try to do it by "
+                         f"{_ENV_FILE_CONFIG_NAME} environmet or --{_ARG_FILE_CONFIG_NAME} argument")
+
+    if not os.path.exists(cfg_file):
+        raise FileNotFoundError(cfg_file)
+
+    global _cached_config
+    with open(cfg_file, "rt") as f:
+        _cached_config = yaml.load(f)
+
+    # added aditional keys to config
+    _cached_config["app"][_ARG_SERVER_FOLDER_NAME] = args[_ARG_SERVER_FOLDER_NAME]
+
+    if _ARG_SERVER_MODE in args and args[_ARG_SERVER_MODE] in _AVAILABLE_MODES:
+        _cached_config["app"][_ARG_SERVER_MODE] = args[_ARG_SERVER_MODE]
+    else:
+        _cached_config["app"][_ARG_SERVER_MODE] = _DEFAULT_APP_MODE
+
+    if _ARG_LIMIT_ARCHIVES_NAME in args and args[_ARG_LIMIT_ARCHIVES_NAME] > 0:
+        _cached_config["app"][_ARG_LIMIT_ARCHIVES_NAME] = args[_ARG_LIMIT_ARCHIVES_NAME]
+    else:
+        _cached_config["app"][_ARG_LIMIT_ARCHIVES_NAME] = 0
+
+    if _ARG_LAW_NUMBER in args:
+        _cached_config["app"][_ARG_LAW_NUMBER] = args[_ARG_LAW_NUMBER]
+    else:
+        _cached_config["app"][_ARG_LAW_NUMBER] = _DEFAULT_LAW_NUMBER
+
+    return True
+
+
+def _read_args() -> dict:
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument("-c", f"--{_ARG_FILE_CONFIG_NAME}", type=str, help="Config file")
+    parser.add_argument("-l", f"--{_ARG_LIMIT_ARCHIVES_NAME}", type=int, help="Limit of archives")
+    parser.add_argument("-m", f"--{_ARG_SERVER_MODE}", type=str, help="Work mode; 'dev' or 'prod'")
+    parser.add_argument("-n", f"--{_ARG_LAW_NUMBER}", type=str, help="Law number")
+    requiredNamed = parser.add_argument_group('required named arguments')
+    requiredNamed.add_argument("-f", f"--{_ARG_SERVER_FOLDER_NAME}", type=str,
+                               help="Name of folder on server, e.g. 'protocols' or 'notifications'", required=True)
+
+    args = parser.parse_args()
+
+    return {
+        _ARG_FILE_CONFIG_NAME: args.config_file,
+        _ARG_LIMIT_ARCHIVES_NAME: args.limit_archives,
+        _ARG_SERVER_FOLDER_NAME: args.server_folder_name,
+        _ARG_SERVER_MODE: args.mode,
+        _ARG_LAW_NUMBER: args.law_number
+    }
+
+
+def conf(key=None):
+    """Config container
+
+        key (str, optional): Defaults to None. Config key.
     """
-    _FIELDS = ("HOST", "USER", "PASSWORD", "NAME", "ECHO", "PORT")
-    _REQUIRED = ("HOST", "USER", "PASSWORD", "NAME", "PORT")
-    _PREFIX = "DB"
 
-    def __init__(self):
-        super().__init__()
-        if "echo" in self._CFG and self._CFG["echo"] is not None:
-            self._CFG["echo"] = str.lower(self._CFG["echo"])
+    if len(_cached_config) == 0:
+        _load_conf()
 
-    @property
-    def host(self):
-        return self._CFG["host"]
+    if key is None:
+        return _cached_config
 
-    @property
-    def user(self):
-        return self._CFG["user"]
-
-    @property
-    def password(self):
-        return self._CFG["password"]
-
-    @property
-    def name(self):
-        return self._CFG["name"]
-
-    @property
-    def echo(self):
-        return self._CFG.get("echo")
-
-    @property
-    def port(self):
-        return self._CFG["port"]
-
-class AppConfig(_BaseConfig):
-    """The main application config.
-    """
-    _FIELDS = ("MODE", "FTP_SERVER", "TMP_FOLDER", "LIMIT_ARCHIVES")
-    _REQUIRED = ("FTP_SERVER", "TMP_FOLDER")
-    _PREFIX = "APP"
-    _default_mode = "prod"
-    _avail_modes = ("dev", _default_mode)
-
-    def __init__(self):
-        super().__init__()
-        if "mode" not in self._CFG or self._CFG["mode"] not in self._avail_modes:
-            self._CFG["mode"] = self._default_mode
-
-        self.log = self._LogConfig()
-
-        if self.mode == "dev" and not self.log._has_configured_level_value:
-            self.log._CFG["level"] = "DEBUG"
-
-        if "limit_archives" in self._CFG:
-            self._CFG["limit_archives"] = int(self._CFG["limit_archives"])
-
-    @property
-    def mode(self):
-        return str.lower(self._CFG["mode"])
-
-    @property
-    def ftp_server(self):
-        return self._CFG["ftp_server"]
-
-    @property
-    def tmp_folder(self):
-        return self._CFG["tmp_folder"]
-
-    @property
-    def limit_archives(self):
-        return self._CFG.get("limit_archives")
-
-    class _LogConfig(_BaseConfig):
-        """Config for logger.
-        """
-        _FIELDS = ("LEVEL",)
-        _PREFIX = "APP_LOG"
-        _default_level = "INFO"
-        _has_configured_level_value = True
-
-        def __init__(self):
-            super().__init__()
-            if "level" not in self._CFG:
-                self._CFG["level"] = self._default_level
-                self._has_configured_level_value = False
-
-        @property
-        def level(self):
-            return self._CFG["level"]
+    # return _get_conf_by_key(key)
+    return _get_conf(key)
 
 
-def _read_config():
-    _read_env()
-    _check_config()
+def _get_conf_by_key(key):
+    splitted_keys = str(key).split(".")
+    if len(splitted_keys) == 1:
+        return _get_conf(key)
+
+    first_item = _get_conf(splitted_keys[0])
+    # print(first_item)
+    if first_item is None:
+        return None
+
+    returned_data = None
+    local_conf = first_item
+    splitted_keys_len = len(splitted_keys)
+    for i in range(1, splitted_keys_len):
+        print(i)
+    #     if isinstance(local_conf, dict):
+    #         print(local_conf)
+    #         local_key = splitted_keys[i]
+    #         print(local_key)
+    #         if local_key in local_conf:
+    #             local_conf = local_conf[local_key]
+    #         else:
+    #             return None
+    #         if i == splitted_keys:
+    #             return local_conf
+    #     else:
+    #         print(type(local_conf))
+    #         print(local_conf)
+    #         return local_conf if i == splitted_keys else None
+
+    return returned_data
 
 
-def _is_env_read():
-    return _CONFIG["__parsed_env"] is True
+def _get_conf(key: str):
+    if key in _cached_config:
+        return _cached_config[key]
 
-
-def _is_config_checked():
-    return _CONFIG["__checked"] is True
-
-
-def _read_env():
-    if _is_env_read():
-        return
-
-    # идём по полям классов, читаём данные из ENV
-    for cls in (DBConfig, AppConfig, AppConfig._LogConfig):
-        for field in cls._FIELDS:
-            env_field = cls._PREFIX + "_" + field
-            cfg_key = cls._PREFIX
-            if cfg_key not in _CONFIG:
-                _CONFIG[cfg_key] = {}
-            if env_field not in os.environ:
-                continue
-            _CONFIG[cfg_key][field.lower()] = os.environ.get(env_field)
-    _CONFIG["__parsed_env"] = True
-
-
-def _check_config():
-    if _is_config_checked():
-        return
-
-    for cls in (DBConfig, AppConfig, AppConfig._LogConfig):
-        for field in cls._REQUIRED:
-            lower_field = str.lower(field)
-            env_field = cls._PREFIX + "_" + field
-            if lower_field not in _CONFIG[cls._PREFIX] or _CONFIG[cls._PREFIX][lower_field] is None:
-                raise LostConfigFieldError(env_field)
-
-    _CONFIG["__checked"] = True
+    return None
