@@ -1,0 +1,15 @@
+---
+app:
+  ftp_server: <FTP SERVER, i.e. ftp.zakupki.gov.ru>
+  tmp_folder: <LOCAL TMP FOLDER FOR TEMPORARY STORING ARCHIVES, i.e. tmp>
+  limit_archives: 0
+  log:
+    level: INFO
+  mode: dev
+db:
+  host: <DB HOST>
+  user: <DB USER>
+  password: <DB PASSWORD>
+  name: <DB NAME>
+  port: <DB PORT>
+  echo: <enable SqlAlchemy echo mode. true or false>

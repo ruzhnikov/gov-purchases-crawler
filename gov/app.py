@@ -5,8 +5,8 @@ import os
 from .log import get_logger
 from .purchases import Client
 from .db import DBClient
-from .law.readers import FortyFourthLawNotifications
-from .config import AppConfig
+from .law.readers import FFLReaders
+from .config import conf
 
 
 _ARCHIVE_EXISTS_BUT_NOT_PARSED = 1
@@ -18,9 +18,13 @@ class _Application():
     def __init__(self):
         self.log = get_logger(__name__)
         self.db = DBClient()
-        self.ffl = FortyFourthLawNotifications()
-        self.cfg = AppConfig()
         self._archives = {}
+
+        cfg = conf("app")
+        self._folder_name = cfg["server_folder_name"]
+        self.log.info(f"Server folder name {self._folder_name}")
+        self._ffl = FFLReaders()
+        self._ffl_reader = self._ffl.notifications if self._folder_name == "notifications" else self._ffl.protocols
 
     def _has_archive(self, finfo: dict) -> bool:
         """Проверяет, нет ли у нас уже информации об этом архиве.
@@ -68,7 +72,7 @@ class _Application():
         key = finfo["full_name"]
         return key in self._archives and self._archives[key] == _ARCHIVE_EXISTS_BUT_SIZE_DIFFERENT
 
-    def _handle_archive(self, finfo: dict):
+    def _handle_archive(self, finfo: dict) -> bool:
         """Работа со скачанным файлом. После обработки файл удаляется
 
         Args:
@@ -76,8 +80,9 @@ class _Application():
         """
 
         self.log.info(f"Archive file: {finfo['fname']}; Size: {finfo['fsize']}")
-        zip_file = self.cfg.tmp_folder + "/" + finfo["fname"]
-        self.ffl.handle_archive(zip_file, finfo["id"])
+        cfg = conf("app")
+        zip_file = cfg["tmp_folder"] + "/" + finfo["fname"]
+        read_archive_result = self._ffl_reader.handle_archive(zip_file, finfo["id"])
 
         # clean after work
         if os.path.isfile(zip_file):
@@ -88,17 +93,20 @@ class _Application():
             if finfo["full_name"] in self._archives:
                 del self._archives[finfo["full_name"]]
 
+        return read_archive_result
+
     def run(self):
         """General method. Running, read and handle archives"""
 
-        server = Client(self.cfg.ftp_server, download_dir=self.cfg.tmp_folder)
+        cfg = conf("app")
+        server = Client(cfg["ftp_server"], download_dir=cfg["tmp_folder"], looking_folder=self._folder_name)
 
         # We can handle particular amount of archives.
         # This parameter is set by config.
         count = 0
         error_count = 0
-        need_limit = self.cfg.limit_archives is not None
-        limit = self.cfg.limit_archives if need_limit else None
+        need_limit = cfg["limit_archives"] != 0
+        limit = cfg["limit_archives"] if need_limit else None
 
         self.log.info(f"Limit is {limit}")
 
@@ -118,6 +126,7 @@ class _Application():
                 # reparse archive again.
                 archive = self.db.get_archive(fdict["fname"], fdict["fsize"])
                 archive_id = archive.id
+                self.log.info(f"Found archive wih ID {archive_id}")
                 if self._need_to_clean_old_files(fdict):
                     self.db.delete_archive_files(archive_id)
 
@@ -125,17 +134,21 @@ class _Application():
             try:
                 server.download(fdict["full_name"], fdict["fname"])
             except Exception as e:
-                # TODO: here we should catch exception of "time is over" and reconnect to server
+                # TODO: here we should catch exception "time is over" and reconnect to server
                 self.log.error(f"Error to download archive: {e}")
                 error_count += 1
                 self.log.info("Try to next iteration")
                 continue
 
             if archive_id is None:
-                archive_id = self.db.add_archive(fname=fdict["fname"], fsize=fdict["fsize"])
+                archive_id = self.db.add_archive(
+                    fname=fdict["fname"],
+                    fsize=fdict["fsize"],
+                    law_number=cfg["law_number"], folder_name=self._folder_name)
 
             fdict["id"] = archive_id
-            self._handle_archive(fdict)
+            if self._handle_archive(fdict) is False:
+                error_count += 1
 
             if need_limit and count >= limit:
                 break

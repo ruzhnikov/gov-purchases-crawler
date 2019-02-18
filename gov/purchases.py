@@ -11,18 +11,19 @@ _FTP_PASSWORD = "free"
 _FTP_ROOT_DIR = "/fcs_regions"
 
 # папка в директории региона. Из этой папки будем выкачивать данные
-_LOOK_FOLDER = "notifications"
+_DEFAULT_LOOK_FOLDER = "notifications"
 
 
 class Client():
     """Класс для работы с FTP сервером"""
 
-    def __init__(self, server_address, download_dir=None):
+    def __init__(self, server_address, download_dir=None, looking_folder=_DEFAULT_LOOK_FOLDER):
         self._server = server_address
         self.log = get_logger(__name__)
         self._is_connected = False
         self._root_folders = []
         self._download_dir = download_dir
+        self._looking_folder = looking_folder
         self._connect()
 
     def _connect(self):
@@ -46,7 +47,7 @@ class Client():
         self._read_root_folders()
         for folder in self._root_folders:
             self.log.info(f"Read folder {folder}")
-            full_folder = _FTP_ROOT_DIR + "/" + folder + "/" + _LOOK_FOLDER
+            full_folder = _FTP_ROOT_DIR + "/" + folder + "/" + self._looking_folder
             yield from self._read_folder_with_archives(full_folder)
 
     def _read_root_folders(self):

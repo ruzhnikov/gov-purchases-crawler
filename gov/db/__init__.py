@@ -8,8 +8,9 @@ import sqlalchemy as sa
 from sqlalchemy.orm import sessionmaker, aliased, relationship
 from datetime import datetime as dt
 from ..log import get_logger
-from ..config import DBConfig, AppConfig
+from ..config import conf, is_production
 from . import models
+from . import _fourty_forth_law_model as ffl_model
 
 
 class DBClient():
@@ -25,16 +26,14 @@ class DBClient():
 
     def __init__(self):
         self.log = get_logger(__name__)
-        self._app_cfg = AppConfig()
-        self._db_cfg = DBConfig()
         self._connect()
 
     def _connect(self):
-        cfg = self._db_cfg
-        conn_str = f"postgresql://{cfg.user}:{cfg.password}@{cfg.host}/{cfg.name}"
-        engine_echo = True if self._app_cfg.mode == "dev" else False
-        if self._db_cfg.echo is not None:
-            engine_echo = self._db_cfg.echo == "yes"
+        cfg = conf("db")
+        conn_str = f"postgresql://{cfg['user']}:{cfg['password']}@{cfg['host']}:{cfg['port']}/{cfg['name']}"
+        engine_echo = not is_production()
+        if cfg["echo"] is not None:
+            engine_echo = cfg["echo"] == True
 
         engine = sa.create_engine(conn_str, echo=engine_echo)
         self.session = sessionmaker(bind=engine)
@@ -45,7 +44,7 @@ class DBClient():
         sess.execute("SELECT TRUE")
         sess.close()
 
-    def _compare_fdata_and_return(self, db_file, fsize: int):
+    def _compare_fdata_and_return(self, db_file, fsize: int) -> int:
         """Проверить информацию по файлу из БД и вернуть результат.
 
         Args:
@@ -97,20 +96,22 @@ class DBClient():
 
         return archive
 
-    def add_archive(self, fname: str, fsize: int) -> int:
-        """Добавляет информацию об архиве в БД. Возвращает ID новой записи.
+    def add_archive(self, fname: str, fsize: int, law_number: str, folder_name: str) -> int:
+        """Add information about archive to DB. Return ID of new record.
 
         Args:
-            fname (str): Имя файла.
-            fsize (int): Размер файла.
+            fname (str): File name.
+            fsize (int): File size.
+            law_number (str): Law number
+            folder_name (str): Folder name.
 
         Returns:
-            int: ID новой записи.
+            int: new archive ID.
         """
 
         self.log.debug(f"Add info about a new archive {fname} to database")
         sess = self.session()
-        archive = models.Archive(name=fname, size=fsize)
+        archive = models.Archive(name=fname, size=fsize, law_number=law_number, folder_name=folder_name)
         sess.add(archive)
         sess.commit()
 
@@ -119,8 +120,10 @@ class DBClient():
 
         return archive_id
 
-    def mark_archive_as_parsed(self, archive_id):
+    def mark_archive_as_parsed(self, archive_id: int):
+        self.log.debug(f"Mark archive with ID {archive_id} as parsed")
         sess = self.session()
+
         archive = sess.query(models.Archive).filter_by(id=archive_id).first()
         archive.has_parsed = True
         archive.parsed_on = dt.utcnow()
@@ -184,27 +187,47 @@ class DBClient():
 class FortyFourthLawDB(DBClient):
     """Class for working with DB of 44th law
     """
+
+    class _Notifications():
+        """Wrapper around notification_* tables"""
+
+        def __init__(self):
+            self.often_tags_table = ffl_model.FFLNotificationOftenTags
+            self.rare_tags_table = ffl_model.FFLNotificationRareTags
+            self.unknown_tags_table = ffl_model.FFLNotificationsUnknownTags
+
+    class _Protocols():
+        """Wrapper around protocols_* tables"""
+
+        def __init__(self):
+            self.often_tags_table = ffl_model.FFLProtocolsOftenTags
+            self.rare_tags_table = ffl_model.FFLProtocolRareTags
+            self.unknown_tags_table = ffl_model.FFLProtocolsUnknownTags
+
     def __init__(self):
         super().__init__()
-        self.often_tags_table = models.FFLNotificationOftenTags
-        self.rare_tags_table = models.FFLNotificationRareTags
-        self.unknown_tags_table = models.FFLNotificationUnknownTags
+        self.protocols = self._Protocols()
+        self.notifications = self._Notifications()
 
     def get_columns_dict(self, table) -> list:
         columns = sa.inspect(table).columns
 
         sess = self.session()
-        for row in sess.query(models.FFLTagsToFieldsDict).all():
+        for row in sess.query(ffl_model.FFLTagsToFieldsDict).all():
             if columns.has_key(row.field):
                 yield row.tag, row.field
 
         sess.close()
 
     def delete_file_tags(self, file_id: int):
+        """Delete all rows related with file_id from all forty_fourth_law.* tables
+
+        Args:
+            file_id (int): ID of XML file.
+        """
         sess = self.session()
-        for model in (models.FFLNotificationOftenTags,
-                      models.FFLNotificationRareTags,
-                      models.FFLNotificationUnknownTags):
-            sess.query(model).filter(model.archive_file_id == file_id).delete()
+        for model in (self.notifications, self.protocols):
+            for table in (model.often_tags_table, model.rare_tags_table, model.unknown_tags_table):
+                sess.query(table).filter(table.archive_file_id == file_id).delete()
         sess.commit()
         sess.close()
