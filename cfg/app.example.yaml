@@ -5,9 +5,6 @@ app:
   limit_archives: 0
   log:
     level: INFO
-  available_modes:
-    - dev
-    - prod
   mode: dev
 db:
   host: <DB HOST>
@@ -15,4 +12,4 @@ db:
   password: <DB PASSWORD>
   name: <DB NAME>
   port: <DB PORT>
-  echo: <SqlAlchemy echo mode>
+  echo: <enable SqlAlchemy echo mode. true or false>

@@ -44,7 +44,7 @@ class DBClient():
         sess.execute("SELECT TRUE")
         sess.close()
 
-    def _compare_fdata_and_return(self, db_file, fsize: int):
+    def _compare_fdata_and_return(self, db_file, fsize: int) -> int:
         """Проверить информацию по файлу из БД и вернуть результат.
 
         Args:
@@ -106,7 +106,7 @@ class DBClient():
             folder_name (str): Folder name.
 
         Returns:
-            int: [description]
+            int: new archive ID.
         """
 
         self.log.debug(f"Add info about a new archive {fname} to database")
@@ -120,8 +120,10 @@ class DBClient():
 
         return archive_id
 
-    def mark_archive_as_parsed(self, archive_id):
+    def mark_archive_as_parsed(self, archive_id: int):
+        self.log.debug(f"Mark archive with ID {archive_id} as parsed")
         sess = self.session()
+
         archive = sess.query(models.Archive).filter_by(id=archive_id).first()
         archive.has_parsed = True
         archive.parsed_on = dt.utcnow()

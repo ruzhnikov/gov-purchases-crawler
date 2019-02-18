@@ -19,6 +19,7 @@ class _FortyFourthLawBase():
         self.log = get_logger(__name__)
         self.db = FortyFourthLawDB()
         self._files = {}
+        self._db_namespace = None
 
     def _register_tags(self, db_namespace):
         """Register tags in local storage"""
@@ -115,8 +116,48 @@ class _FortyFourthLawBase():
             self.db.mark_archive_as_parsed(archive_id)
             return True
 
-    def _parse_and_upload_xml(self, *arg, **kwarg):
-        raise NotImplementedError
+    def _parse_and_upload_xml(self, xml: bytes, file_id: int, reason=None):
+        """Parse XML file. Upload its data to DB.
+
+        Args:
+            xml (bytes): Raw XML file data.
+            file_id (int): ID of row with file info from DB.
+            reason (str, optional): Defaults to None. Field 'reason' for saving in DB.
+        """
+
+        root = etree.fromstring(xml)
+        first_element = list(root)[0]
+        xml_type = util.get_tag(first_element)
+
+        reason = reason if reason is not None else "OK"
+        (often_data, rare_data, unknown_data) = self._read_xml_root(first_element)
+
+        if len(often_data) == 0 and len(rare_data) == 0 and len(unknown_data) == 0:
+            self.log.warn(reason)
+            self.db.mark_archive_file_as_parsed(file_id, xml_type=xml_type,
+                                                reason="There is no one knowledge or unknown tag in file")
+            return
+
+        # we should save all changes by one transaction.
+        session = self.db.session()
+        if len(often_data):
+            often_data["archive_file_id"] = file_id
+            data = self._db_namespace.often_tags_table(**often_data)
+            session.add(data)
+
+        if len(rare_data):
+            rare_data["archive_file_id"] = file_id
+            data = self._db_namespace.rare_tags_table(**rare_data)
+            session.add(data)
+
+        for local_data in unknown_data:
+            data = self._db_namespace.unknown_tags_table(
+                archive_file_id=file_id, name=local_data[0], value=local_data[1])
+            session.add(data)
+
+        self.db.mark_archive_file_as_parsed(file_id, xml_type, reason=reason, session=session)
+        session.commit()
+        session.close()
 
     def _read_xml_root(self, first_element):
         """..."""
@@ -161,49 +202,6 @@ class FortyFourthLawNotifications(_FortyFourthLawBase):
         self._db_namespace = self.db.notifications
         self._register_tags(self._db_namespace)
 
-    def _parse_and_upload_xml(self, xml: bytes, file_id: int, reason=None):
-        """Parse XML file. Upload its data to DB.
-
-        Args:
-            xml (bytes): Raw XML file data.
-            file_id (int): ID of row with file info from DB.
-            reason (str, optional): Defaults to None. Field 'reason' for saving in DB.
-        """
-
-        root = etree.fromstring(xml)
-        first_element = list(root)[0]
-        xml_type = util.get_tag(first_element)
-
-        reason = reason if reason is not None else "OK"
-        (often_data, rare_data, unknown_data) = self._read_xml_root(first_element)
-
-        if len(often_data) == 0 and len(rare_data) == 0 and len(unknown_data) == 0:
-            self.log.warn(reason)
-            self.db.mark_archive_file_as_parsed(file_id, xml_type=xml_type,
-                                                reason="There is no one knowledge or unknown tag in file")
-            return
-
-        # we should save all changes by one transaction.
-        session = self.db.session()
-        if len(often_data):
-            often_data["archive_file_id"] = file_id
-            data = self.db.notifications.often_tags_table(**often_data)
-            session.add(data)
-
-        if len(rare_data):
-            rare_data["archive_file_id"] = file_id
-            data = self.db.notifications.rare_tags_table(**rare_data)
-            session.add(data)
-
-        for local_data in unknown_data:
-            data = self.db.notifications.unknown_tags_table(
-                archive_file_id=file_id, name=local_data[0], value=local_data[1])
-            session.add(data)
-
-        self.db.mark_archive_file_as_parsed(file_id, xml_type, reason=reason, session=session)
-        session.commit()
-        session.close()
-
 
 class FortyFourthLawProtocols(_FortyFourthLawBase):
     """Handler of `protocols` folder of 44th law"""
@@ -215,38 +213,3 @@ class FortyFourthLawProtocols(_FortyFourthLawBase):
         super().__init__()
         self._db_namespace = self.db.protocols
         self._register_tags(self._db_namespace)
-
-    def _parse_and_upload_xml(self, xml: bytes, file_id: int, reason=None):
-        root = etree.fromstring(xml)
-        first_element = list(root)[0]
-        xml_type = util.get_tag(first_element)
-
-        reason = reason if reason is not None else "OK"
-        (often_data, rare_data, unknown_data) = self._read_xml_root(first_element)
-
-        if len(often_data) == 0 and len(rare_data) == 0 and len(unknown_data) == 0:
-            self.log.warn(reason)
-            self.db.mark_archive_file_as_parsed(file_id, xml_type=xml_type,
-                                                reason="There is no one knowledge or unknown tag in file")
-            return
-
-        # we should save all changes by one transaction.
-        session = self.db.session()
-        if len(often_data):
-            often_data["archive_file_id"] = file_id
-            data = self.db.protocols.often_tags_table(**often_data)
-            session.add(data)
-
-        if len(rare_data):
-            rare_data["archive_file_id"] = file_id
-            data = self.db.protocols.rare_tags_table(**rare_data)
-            session.add(data)
-
-        for local_data in unknown_data:
-            data = self.db.protocols.unknown_tags_table(
-                archive_file_id=file_id, name=local_data[0], value=local_data[1])
-            session.add(data)
-
-        self.db.mark_archive_file_as_parsed(file_id, xml_type, reason=reason, session=session)
-        session.commit()
-        session.close()

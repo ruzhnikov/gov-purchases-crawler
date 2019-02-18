@@ -21,6 +21,7 @@ _AVAILABLE_MODES = ("dev", "prod")
 _DEFAULT_APP_MODE = "dev"
 _DEFAULT_LAW_NUMBER = "44"
 _AVAILABLE_FOLDERS = ("protocols", "notifications")
+_DEFAULT_LOG_LEVEL = "INFO"
 
 
 _cached_config = {}
@@ -71,6 +72,9 @@ def _fill_extra_pros(args):
         _cached_config["app"][_ARG_LAW_NUMBER] = args[_ARG_LAW_NUMBER]
     else:
         _cached_config["app"][_ARG_LAW_NUMBER] = _DEFAULT_LAW_NUMBER
+
+    if _cached_config["app"]["log"]["level"] is None:
+        _cached_config["app"]["log"]["level"] = _DEFAULT_LOG_LEVEL
 
 
 def _read_args() -> dict:
