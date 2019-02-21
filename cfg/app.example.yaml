@@ -1,11 +1,11 @@
 ---
 app:
-  ftp_server: <FTP SERVER, i.e. ftp.zakupki.gov.ru>
-  tmp_folder: <LOCAL TMP FOLDER FOR TEMPORARY STORING ARCHIVES, i.e. tmp>
-  limit_archives: 0
+  ftp_server: <FTP SERVER, e.g. ftp.zakupki.gov.ru>
+  tmp_folder: <LOCAL TMP FOLDER FOR TEMPORARY STORING ARCHIVES, e.g. tmp>
+  limit_archives: 0 # limit archives to parse. null or 0 meant no limit
   log:
     level: INFO
-  mode: dev
+  mode: dev # work mode. Available values 'dev' and 'prod'
 db:
   host: <DB HOST>
   user: <DB USER>
