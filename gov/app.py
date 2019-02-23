@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import os
+import signal
 from .log import get_logger
 from .purchases import Client
 from .db import DBClient
@@ -11,6 +12,21 @@ from .config import conf
 
 _ARCHIVE_EXISTS_BUT_NOT_PARSED = 1
 _ARCHIVE_EXISTS_BUT_SIZE_DIFFERENT = 2
+
+
+class _GracefulKiller():
+    """Handler of external signals"""
+
+    kill_now = False
+
+    def __init__(self):
+        self.log = get_logger(__name__)
+        signal.signal(signal.SIGINT, self.exit_gracefully)
+        signal.signal(signal.SIGTERM, self.exit_gracefully)
+
+    def exit_gracefully(self, signum, frame):
+        self.log.info(f"Got signal {signum}; Try to finish work gracefully")
+        self.kill_now = True
 
 
 class _Application():
@@ -23,7 +39,9 @@ class _Application():
         cfg = conf("app")
         self._folder_name = cfg["server_folder_name"]
         self.log.info(f"Server folder name {self._folder_name}")
-        self._ffl = FFLReaders()
+
+        self.killer = _GracefulKiller()
+        self._ffl = FFLReaders(self.killer)
         self._ffl_reader = self._ffl.notifications if self._folder_name == "notifications" else self._ffl.protocols
 
     def _has_archive(self, finfo: dict) -> bool:
@@ -73,10 +91,13 @@ class _Application():
         return key in self._archives and self._archives[key] == _ARCHIVE_EXISTS_BUT_SIZE_DIFFERENT
 
     def _handle_archive(self, finfo: dict) -> bool:
-        """Работа со скачанным файлом. После обработки файл удаляется
+        """Work with downloaded archive. After handling the file is removed.
 
         Args:
-            finfo (dict): Кортеж с данными о файле.
+            finfo (dict): Information about archive file.
+
+        Returns:
+            bool: Work result. If True - all fine, otherwise - an error has been occured.
         """
 
         self.log.info(f"Archive file: {finfo['fname']}; Size: {finfo['fsize']}")
@@ -111,10 +132,14 @@ class _Application():
         self.log.info(f"Limit is {limit}")
 
         for fdict in server.read():
-            if need_limit and limit == 0:
+
+            # got signal from system or user. Abort any actions.
+            if self.killer.kill_now:
+                self.log.info("Gracefully stop reading archives from server because of signal")
                 break
 
             archive_id = None
+            archive_has_updated = False
 
             if self._has_archive(fdict):
                 # we already have this parsed archive. Just skip it.
@@ -122,13 +147,14 @@ class _Application():
                     self.log.debug(f"The file {fdict['fname']} had been parsed early. Skip them.")
                     continue
 
-                # we have non parsed archive or size of archive is different. Anyway we should
-                # reparse archive again.
+                # we have non parsed archive or size of archive is different.
+                # Anyway we should reparse archive again.
                 archive = self.db.get_archive(fdict["fname"], fdict["fsize"])
                 archive_id = archive.id
                 self.log.info(f"Found archive wih ID {archive_id}")
                 if self._need_to_clean_old_files(fdict):
                     self.db.delete_archive_files(archive_id)
+                    archive_has_updated = True
 
             count += 1
             try:
@@ -149,6 +175,9 @@ class _Application():
             fdict["id"] = archive_id
             if self._handle_archive(fdict) is False:
                 error_count += 1
+            elif archive_has_updated:
+                # TODO: здесь нужно обновить size архива
+                self.db.update_archive_size(archive_id, fdict["fsize"])
 
             if need_limit and count >= limit:
                 break
