@@ -130,6 +130,15 @@ class DBClient():
         sess.commit()
         sess.close()
 
+    def update_archive_size(self, archive_id: int, new_size: int):
+        sess = self.session()
+        archive = sess.query(models.Archive).filter_by(id=archive_id).first()
+
+        archive.size = new_size
+        archive.updated_on = dt.utcnow()
+        sess.commit()
+        sess.close()
+
     def add_archive_file(self, archive_id: int, fname: str, fsize: int) -> int:
         self.log.debug(f"Add info to database about a new file {fname} inside archive")
         sess = self.session()

@@ -21,6 +21,9 @@ class _FortyFourthLawBase():
         self._files = {}
         self._db_namespace = None
 
+    def set_killer(self, killer):
+        self.killer = killer
+
     def _register_tags(self, db_namespace):
         """Register tags in local storage"""
 
@@ -63,8 +66,13 @@ class _FortyFourthLawBase():
         """
 
         has_wrong_files = False
+        has_killed = False
         with ZipFile(archive, "r") as zip_file:
             for entry in zip_file.infolist():
+                if self.killer.kill_now:
+                    has_killed = True
+                    break
+
                 if not entry.filename.endswith(".xml"):
                     continue
 
@@ -77,7 +85,7 @@ class _FortyFourthLawBase():
                 if self._has_archive_file(archive_id, fname, fsize):
                     # we already have this parsed file. Just skip it.
                     if not self._need_to_update_file(fname):
-                        self.log.debug(f"The file {fname} had been parsed early. Skip them.")
+                        self.log.debug(f"The file {fname} had been parsed early. Skip it.")
                         continue
 
                     need_to_update = True
@@ -108,7 +116,10 @@ class _FortyFourthLawBase():
                 if fname in self._files:
                     del self._files[fname]
 
-        if has_wrong_files:
+        if has_killed:
+            self.log.info("Gracefully stop reading archive because of signal")
+            return True
+        elif has_wrong_files:
             self.log.warning(
                 f"One or more file(s) of archive {archive_id} weren't parsed. Archive is not marked as parsed")
             return False
