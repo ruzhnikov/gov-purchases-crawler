@@ -155,8 +155,7 @@ def conf(key=None):
     if key is None:
         return _cached_config
 
-    # return _get_conf_by_key(key)
-    return _get_conf(key)
+    return _get_conf_by_key(key)
 
 
 def is_production() -> bool:
