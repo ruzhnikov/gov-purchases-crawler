@@ -36,8 +36,7 @@ class _Application():
         self.db = DBClient()
         self._archives = {}
 
-        cfg = conf("app")
-        self._folder_name = cfg["server_folder_name"]
+        self._folder_name = conf("app.server_folder_name")
         self.log.info(f"Server folder name {self._folder_name}")
 
         self.killer = _GracefulKiller()

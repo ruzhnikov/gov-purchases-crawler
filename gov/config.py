@@ -28,6 +28,8 @@ _cached_config = {}
 
 
 def _load_conf():
+    """Load data from config file. Append extra parameters"""
+
     args = _read_args()
 
     if _ENV_FILE_CONFIG_NAME in os.environ:
@@ -52,7 +54,7 @@ def _load_conf():
 
 
 def _fill_extra_pros(args):
-    """added aditional keys to config"""
+    """Add aditional keys to config"""
 
     if args[_ARG_SERVER_FOLDER_NAME] not in _AVAILABLE_FOLDERS:
         raise ValueError(f"{_ARG_SERVER_FOLDER_NAME} has to be in {[folder for folder in _AVAILABLE_FOLDERS]}")
@@ -78,6 +80,8 @@ def _fill_extra_pros(args):
 
 
 def _read_args() -> dict:
+    """Read arguments from command line"""
+
     parser = argparse.ArgumentParser()
 
     parser.add_argument("-c", f"--{_ARG_FILE_CONFIG_NAME}", type=str, help="Config file")
@@ -100,10 +104,7 @@ def _read_args() -> dict:
 
 
 def _get_conf_by_key(key):
-    """Get config data by separated key
-
-        key can be "aa.bb.cc"
-    """
+    """Get config data by separated key"""
 
     splitted_keys = str(key).split(".")
     if len(splitted_keys) == 1:
@@ -146,7 +147,13 @@ def _get_conf(key: str):
 def conf(key=None):
     """Config container
 
-        key (str, optional): Defaults to None. Config key.
+    key (str, optional): Defaults to None. Config key.
+
+    `key` can be either like just "aa" or "aa.bb.cc"
+
+    If key has view as "aa.bb.cc", the resulted value will be searched in
+        {"aa": {"bb": { "cc": "value" }}}
+    If value for key was not found, `None` will be returned.
     """
 
     if len(_cached_config) == 0:
@@ -159,6 +166,6 @@ def conf(key=None):
 
 
 def is_production() -> bool:
-    """Is it production mode or not"""
+    """Is it production mode or no"""
 
     return conf("app.mode") == "prod"
