@@ -37,7 +37,7 @@ def _load_conf():
 
     if cfg_file is None:
         raise LostConfigError("Do you forget give config file? Try to do it by "
-                         f"{_ENV_FILE_CONFIG_NAME} environmet or --{_ARG_FILE_CONFIG_NAME} argument")
+                              f"{_ENV_FILE_CONFIG_NAME} environmet or --{_ARG_FILE_CONFIG_NAME} argument")
 
     if not os.path.exists(cfg_file):
         raise FileNotFoundError(cfg_file)
@@ -99,7 +99,6 @@ def _read_args() -> dict:
     }
 
 
-# TODO: finish this function
 def _get_conf_by_key(key):
     """Get config data by separated key
 
@@ -111,29 +110,30 @@ def _get_conf_by_key(key):
         return _get_conf(key)
 
     first_item = _get_conf(splitted_keys[0])
-    if first_item is None:
+    if first_item is None or not isinstance(first_item, dict):
         return None
 
-    returned_data = None
-    # local_conf = first_item
-    # splitted_keys_len = len(splitted_keys)
-    # for i in range(1, splitted_keys_len):
-    #     if isinstance(local_conf, dict):
-    #         print(local_conf)
-    #         local_key = splitted_keys[i]
-    #         print(local_key)
-    #         if local_key in local_conf:
-    #             local_conf = local_conf[local_key]
-    #         else:
-    #             return None
-    #         if i == splitted_keys:
-    #             return local_conf
-    #     else:
-    #         print(type(local_conf))
-    #         print(local_conf)
-    #         return local_conf if i == splitted_keys else None
+    local_cfg = first_item
+    splitted_keys_len = len(splitted_keys)
+    returned_value = None
 
-    return returned_data
+    def search_value_in_config(key, config):
+        return config.get(key)
+
+    for i in range(1, splitted_keys_len):
+        is_last_element = (i + 1) == splitted_keys_len
+        local_key = splitted_keys[i]
+        found_value = search_value_in_config(local_key, local_cfg)
+
+        if found_value is None:
+            returned_value = None
+            break
+        elif isinstance(found_value, dict):
+            returned_value = local_cfg = found_value
+        elif is_last_element:
+            returned_value = found_value
+
+    return returned_value
 
 
 def _get_conf(key: str):
@@ -162,4 +162,4 @@ def conf(key=None):
 def is_production() -> bool:
     """Is it production mode or not"""
 
-    return _cached_config["app"]["mode"] == "prod"
+    return conf("app.mode") == "prod"
