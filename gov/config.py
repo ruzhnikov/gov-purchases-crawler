@@ -118,13 +118,10 @@ def _get_conf_by_key(key):
     splitted_keys_len = len(splitted_keys)
     returned_value = None
 
-    def search_value_in_config(key, config):
-        return config.get(key)
-
     for i in range(1, splitted_keys_len):
         is_last_element = (i + 1) == splitted_keys_len
         local_key = splitted_keys[i]
-        found_value = search_value_in_config(local_key, local_cfg)
+        found_value = local_cfg.get(local_key)
 
         if found_value is None:
             returned_value = None
