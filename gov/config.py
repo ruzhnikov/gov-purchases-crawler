@@ -22,6 +22,7 @@ _DEFAULT_APP_MODE = "dev"
 _DEFAULT_LAW_NUMBER = "44"
 _AVAILABLE_FOLDERS = ("protocols", "notifications")
 _DEFAULT_LOG_LEVEL = "INFO"
+_DEFAULT_DB_ECHO = False
 
 
 _cached_config = {}
@@ -60,23 +61,33 @@ def _fill_extra_pros(args):
         raise ValueError(f"{_ARG_SERVER_FOLDER_NAME} has to be in {[folder for folder in _AVAILABLE_FOLDERS]}")
     _cached_config["app"][_ARG_SERVER_FOLDER_NAME] = args[_ARG_SERVER_FOLDER_NAME]
 
-    if _ARG_SERVER_MODE in args and args[_ARG_SERVER_MODE] in _AVAILABLE_MODES:
-        _cached_config["app"][_ARG_SERVER_MODE] = args[_ARG_SERVER_MODE]
-    else:
-        _cached_config["app"][_ARG_SERVER_MODE] = _DEFAULT_APP_MODE
+    # set work mode
+    _cached_config["app"][_ARG_SERVER_MODE] = _DEFAULT_APP_MODE
 
+    if _ENV_SERVER_MODE in os.environ and os.environ[_ENV_SERVER_MODE] in _AVAILABLE_MODES:
+        _cached_config["app"][_ARG_SERVER_MODE] = os.environ[_ENV_SERVER_MODE]
+    elif _ARG_SERVER_MODE in args and args[_ARG_SERVER_MODE] in _AVAILABLE_MODES:
+        _cached_config["app"][_ARG_SERVER_MODE] = args[_ARG_SERVER_MODE]
+
+    # set limit archives
     if _ARG_LIMIT_ARCHIVES_NAME in args and args[_ARG_LIMIT_ARCHIVES_NAME] > 0:
         _cached_config["app"][_ARG_LIMIT_ARCHIVES_NAME] = args[_ARG_LIMIT_ARCHIVES_NAME]
     else:
         _cached_config["app"][_ARG_LIMIT_ARCHIVES_NAME] = 0
 
+    # set law number
     if _ARG_LAW_NUMBER in args:
         _cached_config["app"][_ARG_LAW_NUMBER] = args[_ARG_LAW_NUMBER]
     else:
         _cached_config["app"][_ARG_LAW_NUMBER] = _DEFAULT_LAW_NUMBER
 
+    # set log parameters
     if _cached_config["app"]["log"]["level"] is None:
         _cached_config["app"]["log"]["level"] = _DEFAULT_LOG_LEVEL
+
+    # set DB echo mode
+    if _cached_config["db"]["echo"] is None or _cached_config["db"]["echo"] is not bool:
+        _cached_config["db"]["echo"] = _DEFAULT_DB_ECHO
 
 
 def _read_args() -> dict:

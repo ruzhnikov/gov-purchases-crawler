@@ -5,7 +5,6 @@ app:
   limit_archives: 0 # limit archives to parse. null or 0 meant no limit
   log:
     level: INFO
-  mode: dev # work mode. Available values 'dev' and 'prod'
 db:
   host: <DB HOST>
   user: <DB USER>
