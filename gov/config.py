@@ -22,12 +22,15 @@ _DEFAULT_APP_MODE = "dev"
 _DEFAULT_LAW_NUMBER = "44"
 _AVAILABLE_FOLDERS = ("protocols", "notifications")
 _DEFAULT_LOG_LEVEL = "INFO"
+_DEFAULT_DB_ECHO = False
 
 
 _cached_config = {}
 
 
 def _load_conf():
+    """Load data from config file. Append extra parameters"""
+
     args = _read_args()
 
     if _ENV_FILE_CONFIG_NAME in os.environ:
@@ -37,7 +40,7 @@ def _load_conf():
 
     if cfg_file is None:
         raise LostConfigError("Do you forget give config file? Try to do it by "
-                         f"{_ENV_FILE_CONFIG_NAME} environmet or --{_ARG_FILE_CONFIG_NAME} argument")
+                              f"{_ENV_FILE_CONFIG_NAME} environmet or --{_ARG_FILE_CONFIG_NAME} argument")
 
     if not os.path.exists(cfg_file):
         raise FileNotFoundError(cfg_file)
@@ -52,32 +55,44 @@ def _load_conf():
 
 
 def _fill_extra_pros(args):
-    """added aditional keys to config"""
+    """Add aditional keys to config"""
 
     if args[_ARG_SERVER_FOLDER_NAME] not in _AVAILABLE_FOLDERS:
         raise ValueError(f"{_ARG_SERVER_FOLDER_NAME} has to be in {[folder for folder in _AVAILABLE_FOLDERS]}")
     _cached_config["app"][_ARG_SERVER_FOLDER_NAME] = args[_ARG_SERVER_FOLDER_NAME]
 
-    if _ARG_SERVER_MODE in args and args[_ARG_SERVER_MODE] in _AVAILABLE_MODES:
-        _cached_config["app"][_ARG_SERVER_MODE] = args[_ARG_SERVER_MODE]
-    else:
-        _cached_config["app"][_ARG_SERVER_MODE] = _DEFAULT_APP_MODE
+    # set work mode
+    _cached_config["app"][_ARG_SERVER_MODE] = _DEFAULT_APP_MODE
 
+    if _ENV_SERVER_MODE in os.environ and os.environ[_ENV_SERVER_MODE] in _AVAILABLE_MODES:
+        _cached_config["app"][_ARG_SERVER_MODE] = os.environ[_ENV_SERVER_MODE]
+    elif _ARG_SERVER_MODE in args and args[_ARG_SERVER_MODE] in _AVAILABLE_MODES:
+        _cached_config["app"][_ARG_SERVER_MODE] = args[_ARG_SERVER_MODE]
+
+    # set limit archives
     if _ARG_LIMIT_ARCHIVES_NAME in args and args[_ARG_LIMIT_ARCHIVES_NAME] > 0:
         _cached_config["app"][_ARG_LIMIT_ARCHIVES_NAME] = args[_ARG_LIMIT_ARCHIVES_NAME]
     else:
         _cached_config["app"][_ARG_LIMIT_ARCHIVES_NAME] = 0
 
+    # set law number
     if _ARG_LAW_NUMBER in args:
         _cached_config["app"][_ARG_LAW_NUMBER] = args[_ARG_LAW_NUMBER]
     else:
         _cached_config["app"][_ARG_LAW_NUMBER] = _DEFAULT_LAW_NUMBER
 
+    # set log parameters
     if _cached_config["app"]["log"]["level"] is None:
         _cached_config["app"]["log"]["level"] = _DEFAULT_LOG_LEVEL
 
+    # set DB echo mode
+    if _cached_config["db"]["echo"] is None or _cached_config["db"]["echo"] is not bool:
+        _cached_config["db"]["echo"] = _DEFAULT_DB_ECHO
+
 
 def _read_args() -> dict:
+    """Read arguments from command line"""
+
     parser = argparse.ArgumentParser()
 
     parser.add_argument("-c", f"--{_ARG_FILE_CONFIG_NAME}", type=str, help="Config file")
@@ -99,41 +114,35 @@ def _read_args() -> dict:
     }
 
 
-# TODO: finish this function
 def _get_conf_by_key(key):
-    """Get config data by separated key
-
-        key can be "aa.bb.cc"
-    """
+    """Get config data by separated key"""
 
     splitted_keys = str(key).split(".")
     if len(splitted_keys) == 1:
         return _get_conf(key)
 
     first_item = _get_conf(splitted_keys[0])
-    if first_item is None:
+    if first_item is None or not isinstance(first_item, dict):
         return None
 
-    returned_data = None
-    # local_conf = first_item
-    # splitted_keys_len = len(splitted_keys)
-    # for i in range(1, splitted_keys_len):
-    #     if isinstance(local_conf, dict):
-    #         print(local_conf)
-    #         local_key = splitted_keys[i]
-    #         print(local_key)
-    #         if local_key in local_conf:
-    #             local_conf = local_conf[local_key]
-    #         else:
-    #             return None
-    #         if i == splitted_keys:
-    #             return local_conf
-    #     else:
-    #         print(type(local_conf))
-    #         print(local_conf)
-    #         return local_conf if i == splitted_keys else None
+    local_cfg = first_item
+    splitted_keys_len = len(splitted_keys)
+    returned_value = None
 
-    return returned_data
+    for i in range(1, splitted_keys_len):
+        is_last_element = (i + 1) == splitted_keys_len
+        local_key = splitted_keys[i]
+        found_value = local_cfg.get(local_key)
+
+        if found_value is None:
+            returned_value = None
+            break
+        elif isinstance(found_value, dict):
+            returned_value = local_cfg = found_value
+        elif is_last_element:
+            returned_value = found_value
+
+    return returned_value
 
 
 def _get_conf(key: str):
@@ -146,7 +155,13 @@ def _get_conf(key: str):
 def conf(key=None):
     """Config container
 
-        key (str, optional): Defaults to None. Config key.
+    key (str, optional): Defaults to None. Config key.
+
+    `key` can be either like just "aa" or "aa.bb.cc"
+
+    If key has view as "aa.bb.cc", the resulted value will be searched in
+        {"aa": {"bb": { "cc": "value" }}}
+    If value for key was not found, `None` will be returned.
     """
 
     if len(_cached_config) == 0:
@@ -155,11 +170,10 @@ def conf(key=None):
     if key is None:
         return _cached_config
 
-    # return _get_conf_by_key(key)
-    return _get_conf(key)
+    return _get_conf_by_key(key)
 
 
 def is_production() -> bool:
-    """Is it production mode or not"""
+    """Is it production mode or no"""
 
-    return _cached_config["app"]["mode"] == "prod"
+    return conf("app.mode") == "prod"

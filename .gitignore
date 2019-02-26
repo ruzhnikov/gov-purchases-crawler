@@ -13,3 +13,5 @@ docker
 .eggs
 cfg/*
 !cfg/app.example.yaml
+tests/*
+!tests/test_*
