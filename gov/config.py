@@ -97,7 +97,8 @@ def _fill_extra_pros(args):
         filter_str = os.environ.get(_ENV_FILTER)
         if filter_str is None or filter_str == "":
             filter_str = args[_ARG_FILTER]
-    else:
+
+    if filter_str is None:
         filter_str = "[]"
 
     _cached_config["app"]["filters"] = parse_filter(filter_str)
