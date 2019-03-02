@@ -8,10 +8,12 @@ import os
 import argparse
 import yaml
 from .errors import LostConfigError
+from .filter import parse_filter, get_help as filters_help
 
 
 _ENV_FILE_CONFIG_NAME = "APP_CONFIG_FILE"
 _ENV_SERVER_MODE = "APP_SERVER_MODE"
+_ENV_FILTER = "APP_FILTERS"
 _ARG_FILE_CONFIG_NAME = "config_file"
 _ARG_LIMIT_ARCHIVES_NAME = "limit_archives"
 _ARG_SERVER_FOLDER_NAME = "server_folder_name"
@@ -23,6 +25,7 @@ _DEFAULT_LAW_NUMBER = "44"
 _AVAILABLE_FOLDERS = ("protocols", "notifications")
 _DEFAULT_LOG_LEVEL = "INFO"
 _DEFAULT_DB_ECHO = False
+_ARG_FILTER = "filters"
 
 
 _cached_config = {}
@@ -89,6 +92,16 @@ def _fill_extra_pros(args):
     if _cached_config["db"]["echo"] is None or _cached_config["db"]["echo"] is not bool:
         _cached_config["db"]["echo"] = _DEFAULT_DB_ECHO
 
+    # add filter
+    if _ENV_FILTER in os.environ or _ARG_FILTER in args:
+        filter_str = os.environ.get(_ENV_FILTER)
+        if filter_str is None or filter_str == "":
+            filter_str = args[_ARG_FILTER]
+    else:
+        filter_str = "[]"
+
+    _cached_config["app"]["filters"] = parse_filter(filter_str)
+
 
 def _read_args() -> dict:
     """Read arguments from command line"""
@@ -99,6 +112,7 @@ def _read_args() -> dict:
     parser.add_argument("-l", f"--{_ARG_LIMIT_ARCHIVES_NAME}", type=int, help="Limit of archives")
     parser.add_argument("-m", f"--{_ARG_SERVER_MODE}", type=str, help="Work mode; 'dev' or 'prod'")
     parser.add_argument("-n", f"--{_ARG_LAW_NUMBER}", type=str, help="Law number")
+    parser.add_argument("-F", f"--{_ARG_FILTER}", type=str, help=filters_help())
     requiredNamed = parser.add_argument_group('required named arguments')
     requiredNamed.add_argument("-f", f"--{_ARG_SERVER_FOLDER_NAME}", type=str,
                                help=f"Name of folder on server", required=True)
@@ -110,7 +124,8 @@ def _read_args() -> dict:
         _ARG_LIMIT_ARCHIVES_NAME: args.limit_archives,
         _ARG_SERVER_FOLDER_NAME: args.server_folder_name,
         _ARG_SERVER_MODE: args.mode,
-        _ARG_LAW_NUMBER: args.law_number
+        _ARG_LAW_NUMBER: args.law_number,
+        _ARG_FILTER: args.filters
     }
 
 
