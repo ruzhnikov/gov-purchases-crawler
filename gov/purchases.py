@@ -22,6 +22,7 @@ class Client():
         self.log = get_logger(__name__)
         self._is_connected = False
         self._root_folders = []
+        self._skipped_region = None
         self._download_dir = download_dir
         self._looking_folder = looking_folder
         self._connect()
@@ -45,10 +46,19 @@ class Client():
         """Читает файлы в папках, возвращает итератор"""
 
         self._read_root_folders()
-        for folder in self._root_folders:
-            self.log.info(f"Read folder {folder}")
-            full_folder = _FTP_ROOT_DIR + "/" + folder + "/" + self._looking_folder
-            yield from self._read_folder_with_archives(full_folder)
+        for region in self._root_folders:
+            self.log.info(f"Read folder {region}")
+            if self._skipped_region is not None:
+                skipped_region = self._skipped_region
+                self._skipped_region = None
+                if skipped_region == region:
+                    continue
+
+            full_folder = _FTP_ROOT_DIR + "/" + region + "/" + self._looking_folder
+            yield from self._read_folder_with_archives(full_folder, region)
+
+    def set_region_skipped(self, region: str):
+        self._skipped_region = region
 
     def _read_root_folders(self):
         """Получить папки с регионами из корневой директории"""
@@ -60,7 +70,7 @@ class Client():
         self._root_folders = [item.pop()
                               for item in items if item[0][0] == 'd']
 
-    def _read_folder_with_archives(self, folder):
+    def _read_folder_with_archives(self, folder: str, region: str):
         """Прочитать файлы из указанной папки.
         Вложенные папки также будут прочитаны. Возвращает итератор
 
@@ -77,17 +87,21 @@ class Client():
 
         # идём по списку файлов
         for item in items:
+            if self._skipped_region is not None and self._skipped_region == region:
+                self._leave_current_directory()
+                break
+
             item_type = item[0][0]
             if item_type == "d":
 
                 # это директория. Вызовём для неё рекурсивно сами себя
                 local_folder = item.pop()
                 self.log.info(f"Go inside {local_folder}")
-                yield from self._read_folder_with_archives(folder + "/" + local_folder)
+                yield from self._read_folder_with_archives(folder + "/" + local_folder, region)
 
                 # После работы нужно вернуться в предыдущую папку
                 self.log.info(f"Leave {local_folder}")
-                self.ftp.cwd("../")
+                self._leave_current_directory()
             else:
 
                 # это файл, читаем информацию о нём и возвращаем её
@@ -97,8 +111,12 @@ class Client():
                 yield {
                     "full_name": full_file,
                     "fname": file,
-                    "fsize": int(file_size)
+                    "fsize": int(file_size),
+                    "region": region
                 }
+
+    def _leave_current_directory(self):
+        self.ftp.cwd("../")
 
     def download(self, fpath, fname, download_dir=None):
         """Скачать файл
