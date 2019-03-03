@@ -14,6 +14,7 @@ from .filter import parse_filter, get_help as filters_help
 _ENV_FILE_CONFIG_NAME = "APP_CONFIG_FILE"
 _ENV_SERVER_MODE = "APP_SERVER_MODE"
 _ENV_FILTER = "APP_FILTERS"
+_ENV_LOG_LEVEL = "APP_LOG_LEVEL"
 _ARG_FILE_CONFIG_NAME = "config_file"
 _ARG_LIMIT_ARCHIVES_NAME = "limit_archives"
 _ARG_SERVER_FOLDER_NAME = "server_folder_name"
@@ -73,7 +74,8 @@ def _fill_extra_pros(args):
         _cached_config["app"][_ARG_SERVER_MODE] = args[_ARG_SERVER_MODE]
 
     # set limit archives
-    if _ARG_LIMIT_ARCHIVES_NAME in args and args[_ARG_LIMIT_ARCHIVES_NAME] > 0:
+    if _ARG_LIMIT_ARCHIVES_NAME in args and type(
+            args[_ARG_LIMIT_ARCHIVES_NAME]) is int and args[_ARG_LIMIT_ARCHIVES_NAME] > 0:
         _cached_config["app"][_ARG_LIMIT_ARCHIVES_NAME] = args[_ARG_LIMIT_ARCHIVES_NAME]
     else:
         _cached_config["app"][_ARG_LIMIT_ARCHIVES_NAME] = 0
@@ -87,6 +89,9 @@ def _fill_extra_pros(args):
     # set log parameters
     if _cached_config["app"]["log"]["level"] is None:
         _cached_config["app"]["log"]["level"] = _DEFAULT_LOG_LEVEL
+
+    if _ENV_LOG_LEVEL in os.environ:
+        _cached_config["app"]["log"]["level"] = os.environ[_ENV_LOG_LEVEL]
 
     # set DB echo mode
     if _cached_config["db"]["echo"] is None or _cached_config["db"]["echo"] is not bool:
