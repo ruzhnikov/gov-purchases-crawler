@@ -170,8 +170,12 @@ class _FortyFourthLawBase():
         session.commit()
         session.close()
 
-    def _read_xml_root(self, first_element):
-        """..."""
+    def _read_xml_root(self, first_element) -> (dict, dict, list):
+        """Read and parse XML elements that are children of root element(first_element)
+
+        Args:
+            first_element (etree._Element): Root element.
+        """
 
         (often_data, rare_data) = ({}, {})
         unknown_data = []
@@ -202,7 +206,7 @@ class _FortyFourthLawBase():
 
 
 class FortyFourthLawNotifications(_FortyFourthLawBase):
-    """Handler of 'notifications' folder of 44th law
+    """Handler of `notifications` folder of 44th law
     """
 
     _TAG_HANDLERS = {}

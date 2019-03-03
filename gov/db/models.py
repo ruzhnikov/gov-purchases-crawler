@@ -20,6 +20,7 @@ class Archive(Base):
     size = sa.Column(sa.Integer, nullable=False)
     downloaded_on = sa.Column(sa.DateTime, nullable=False, server_default=sa.text("NOW() AT TIME ZONE 'utc'"))
     parsed_on = sa.Column(sa.DateTime, nullable=True)
+    updated_on = sa.Column(sa.DateTime, nullable=True)
     has_parsed = sa.Column(sa.Boolean, nullable=False, default=False)
     law_number = sa.Column(ENUM("44", "223", name="law"), nullable=False, default="44")
     folder_name = sa.Column(sa.String(100), nullable=False)
