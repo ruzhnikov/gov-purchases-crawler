@@ -21,6 +21,18 @@ def _op_not_like(a, b, ignore_case=False):
     return not _op_like(a, b, ignore_case)
 
 
+def _op_begin(a, b, ignore_case=False):
+    pattern = re.escape(b) + r".*"
+    flags = re.IGNORECASE if ignore_case else 0
+    return re.search(pattern, a, flags) is not None
+
+
+def _op_end(a, b, ignore_case=False):
+    pattern = r".*" + re.escape(b)
+    flags = re.IGNORECASE if ignore_case else 0
+    return re.search(pattern, a, flags) is not None
+
+
 def _op_in(a, b: list, ignore_case=False):
     if not isinstance(b, list):
         raise TypeError(f"{b} must be list")
@@ -110,12 +122,14 @@ _OPERATORS = {
     "between": _op_between,
     "not between": _op_not_between,
     "in": _op_in,
-    "not in": _op_not_in
+    "not in": _op_not_in,
+    "begin": _op_begin,
+    "end": _op_end
 }
 
 _OPERATORS["="] = _OPERATORS["eq"] = _OPERATORS["=="]
 _COMPLEX_MATCHES = ("in", "not in", "between", "not between")
-_LIKE_MATCHES = ("like", "not like")
+_LIKE_MATCHES = ("like", "not like", "begin", "end")
 _DEFAULT_MATCH = "=="
 _FILTERS = {}
 _MANDATORY_FILTER_FIELDS = frozenset(("field", "value"))
@@ -168,8 +182,8 @@ def _check_match(match: str, field: str):
     if match not in _OPERATORS:
         raise UnknownFilterMatchError(f"Unknown match {match}")
 
-    if field == "date" and match == "like":
-        raise WrongFilterFieldError("The 'date' field does not support match 'like'")
+    if field == "date" and match in _LIKE_MATCHES:
+        raise WrongFilterFieldError(f"The 'date' field does not support match {match}")
 
 
 def _prepare_date_value(date: str, match_str: str):
@@ -183,7 +197,7 @@ def _prepare_date_value(date: str, match_str: str):
         elif len(splitted_date) == 1:
             return dt.strptime(date_str, "%Y-%m-%d")
         else:
-            raise ValueError(f"The date has to be in either '%Y-%m-%d %H:%M:%S' or '%Y-%m-%d' format")
+            raise ValueError("The date has to be in either '%Y-%m-%d %H:%M:%S' or '%Y-%m-%d' format")
 
     if match_str in _COMPLEX_MATCHES:
         returned_date = []
