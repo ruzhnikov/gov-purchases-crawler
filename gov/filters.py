@@ -130,6 +130,8 @@ _OPERATORS = {
 _OPERATORS["="] = _OPERATORS["eq"] = _OPERATORS["=="]
 _COMPLEX_MATCHES = ("in", "not in", "between", "not between")
 _LIKE_MATCHES = ("like", "not like", "begin", "end")
+_NEGATIVE_MATCHES = frozenset(("!=", "not like", "not between", "not in"))
+_POSITIVE_MATCHES = set(_OPERATORS.keys()) ^ _NEGATIVE_MATCHES
 _DEFAULT_MATCH = "=="
 _FILTERS = {}
 _MANDATORY_FILTER_FIELDS = frozenset(("field", "value"))
@@ -153,7 +155,8 @@ def _read_filter(filter_dict: dict):
     _check_match(filter_match, filter_field)
 
     # ignorecase
-    filter_ignore_case = filter_dict.get("ignorecase")
+    filter_ignore_case = filter_dict.get("ignorecase") or filter_dict.get(
+        "ignore_case") or filter_dict.get("ignoreCase")
     if filter_ignore_case is None:
         filter_ignore_case = False
     elif type(filter_ignore_case) is not bool:
@@ -263,12 +266,20 @@ class _Filters():
     def has_region_filter(self):
         return self._region_filter is not None
 
+    @property
+    def is_positive_date_match(self):
+        return self.has_date_filter and self._date_filter["match"] in _POSITIVE_MATCHES
+
+    @property
+    def is_positive_region_match(self):
+        return self.has_region_filter and self._region_filter["match"] in _POSITIVE_MATCHES
+
     def filter_date(self, date: dt) -> bool:
         if not self.has_date_filter:
             return False
 
         if not isinstance(date, dt):
-            raise TypeError(f"{date} must be {type(dt)}")
+            raise TypeError(f"{date} must be instance of datetime.datetime")
 
         return self._invoke_filter(date, self._date_filter)
 

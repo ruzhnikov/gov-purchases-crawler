@@ -8,7 +8,7 @@ import os
 import argparse
 import yaml
 from .errors import LostConfigError
-from .filter import parse_filter, get_help as filters_help
+from .filters import parse_filter, get_help as filters_help
 
 
 _ENV_FILE_CONFIG_NAME = "APP_CONFIG_FILE"
