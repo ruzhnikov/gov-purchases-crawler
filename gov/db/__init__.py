@@ -5,7 +5,7 @@
 """
 
 import sqlalchemy as sa
-from sqlalchemy.orm import sessionmaker, aliased, relationship
+from sqlalchemy.orm import sessionmaker, aliased
 from datetime import datetime as dt
 from ..log import get_logger
 from ..config import conf, is_production
@@ -132,10 +132,19 @@ class DBClient():
 
     def update_archive_size(self, archive_id: int, new_size: int):
         sess = self.session()
-        archive = sess.query(models.Archive).filter_by(id=archive_id).first()
+        sess.query(
+            models.Archive).filter_by(
+            id=archive_id).update(
+            {"size": new_size, "updated_on": dt.utcnow()})
+        sess.commit()
+        sess.close()
 
-        archive.size = new_size
-        archive.updated_on = dt.utcnow()
+    def touch_archive(self, archive_id: int):
+        sess = self.session()
+        sess.query(
+            models.Archive).filter_by(
+            id=archive_id).update(
+            {"updated_on": dt.utcnow()})
         sess.commit()
         sess.close()
 
