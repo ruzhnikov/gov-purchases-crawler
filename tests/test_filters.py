@@ -15,6 +15,8 @@ class TestEqual():
 
         assert f.has_date_filter is True
         assert f.filter_date(date) is True
+        assert f.is_positive_date_match is True
+        assert f.is_negative_date_match is False
         assert filters._op_equal(date, date_from_filter) is True
 
     def test_region(self):
@@ -27,6 +29,7 @@ class TestEqual():
         assert f.filter_region(region) is True
         assert f.filter_region(region.lower()) is True
         assert f.is_positive_region_match is True
+        assert f.is_negative_region_match is False
         assert filters._op_equal(region, region) is True
         assert filters._op_equal(region.lower(), region) is False
         assert filters._op_equal(region.lower(), region, True) is True
@@ -46,6 +49,7 @@ class TestNotEqual():
         assert f.filter_date(date_not_equal_less) is True
         assert f.filter_date(date_not_equal_more) is True
         assert f.is_positive_date_match is False
+        assert f.is_negative_date_match is True
         assert filters._op_not_equal(date_equal, date_from_filter) is False
         assert filters._op_not_equal(date_not_equal_less, date_from_filter) is True
         assert filters._op_not_equal(date_not_equal_more, date_from_filter) is True
@@ -68,6 +72,7 @@ class TestMoreOrEqual():
         assert f.filter_date(date_more) is True
         assert f.filter_date(date_less) is False
         assert f.is_positive_date_match is True
+        assert f.is_negative_date_match is False
 
         assert filters._op_more_or_equal(date_equal, date_from_filter) is True
         assert filters._op_more_or_equal(date_more, date_from_filter) is True

@@ -12,9 +12,9 @@ from .errors import UnknownFilterMatchError, WrongFilterFormatError, WrongFilter
 
 
 def _op_like(a, b, ignore_case=False):
-    pattern = r".*" + re.escape(a) + r".*"
+    pattern = r".*" + re.escape(b) + r".*"
     flags = re.IGNORECASE if ignore_case else 0
-    return re.search(pattern, b, flags) is not None
+    return re.search(pattern, a, flags) is not None
 
 
 def _op_not_like(a, b, ignore_case=False):
@@ -271,8 +271,16 @@ class _Filters():
         return self.has_date_filter and self._date_filter["match"] in _POSITIVE_MATCHES
 
     @property
+    def is_negative_date_match(self):
+        return not self.is_positive_date_match
+
+    @property
     def is_positive_region_match(self):
         return self.has_region_filter and self._region_filter["match"] in _POSITIVE_MATCHES
+
+    @property
+    def is_negative_region_match(self):
+        return not self.is_positive_region_match
 
     def filter_date(self, date: dt) -> bool:
         if not self.has_date_filter:
