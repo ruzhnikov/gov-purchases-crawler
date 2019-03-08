@@ -8,6 +8,7 @@ from .purchases import Client
 from .db import DBClient
 from .law.readers import FFLReaders
 from .config import conf
+from .util import get_archive_date
 
 
 _ARCHIVE_EXISTS_BUT_NOT_PARSED = 1
@@ -35,9 +36,11 @@ class _Application():
         self.log = get_logger(__name__)
         self.db = DBClient()
         self._archives = {}
+        self._client = None
 
         self._folder_name = conf("app.server_folder_name")
-        self.log.info(f"Server folder name {self._folder_name}")
+        self._law_number = conf("app.law_number")
+        self.log.info(f"Server folder name is '{self._folder_name}'")
 
         self.killer = _GracefulKiller()
         self._ffl = FFLReaders(self.killer)
@@ -89,6 +92,10 @@ class _Application():
         key = finfo["full_name"]
         return key in self._archives and self._archives[key] == _ARCHIVE_EXISTS_BUT_SIZE_DIFFERENT
 
+    def _archive_was_not_parsed(self, finfo: dict) -> bool:
+        key = finfo["full_name"]
+        return key in self._archives and self._archives[key] == _ARCHIVE_EXISTS_BUT_NOT_PARSED
+
     def _handle_archive(self, finfo: dict) -> bool:
         """Work with downloaded archive. After handling the file is removed.
 
@@ -118,27 +125,37 @@ class _Application():
     def run(self):
         """General method. Running, read and handle archives"""
 
-        cfg = conf("app")
-        server = Client(cfg["ftp_server"], download_dir=cfg["tmp_folder"], looking_folder=self._folder_name)
+        self._client = Client(
+            conf("app.ftp_server"),
+            download_dir=conf("app.tmp_folder"),
+            looking_folder=self._folder_name)
 
-        # We can handle particular amount of archives.
-        # This parameter is set by config.
-        count = 0
-        error_count = 0
-        need_limit = cfg["limit_archives"] != 0
-        limit = cfg["limit_archives"] if need_limit else None
+        has_limit, limit = self._get_limit()
+        self.log.info(f"Limit of archives is {limit if limit is not None else 'Unlimited'}")
+        count, error_count = self._read_from_client(has_limit, limit)
 
-        self.log.info(f"Limit is {limit}")
+        self.log.info(f"Total were handled: {count} archive(s)")
+        self.log.info(f"Total were obtained {error_count} errors")
 
-        for fdict in server.read():
+    def _read_from_client(self, has_limit: bool, limit):
+        count = error_count = 0
+
+        for fdict in self._client.read():
 
             # got signal from system or user. Abort any actions.
             if self.killer.kill_now:
-                self.log.info("Gracefully stop reading archives from server because of signal")
+                self.log.info("Abort reading archives from server because of interrupt signal")
                 break
 
+            # invoke filters
+            if self._skip_archive_by_region_filter(fdict["region"]):
+                continue
+
+            if self._skip_archive_by_date_filter(fdict['fname']):
+                continue
+
             archive_id = None
-            archive_has_updated = False
+            need_to_touch_archive = need_to_update_archive_size = False
 
             if self._has_archive(fdict):
                 # we already have this parsed archive. Just skip it.
@@ -153,36 +170,86 @@ class _Application():
                 self.log.info(f"Found archive wih ID {archive_id}")
                 if self._need_to_clean_old_files(fdict):
                     self.db.delete_archive_files(archive_id)
-                    archive_has_updated = True
+                    need_to_update_archive_size = True
+                elif self._archive_was_not_parsed(fdict):
+                    need_to_touch_archive = True
 
             count += 1
-            try:
-                server.download(fdict["full_name"], fdict["fname"])
-            except Exception as e:
-                # TODO: here we should catch exception "time is over" and reconnect to server
-                self.log.error(f"Error to download archive: {e}")
+            if not self._download(fdict):
                 error_count += 1
-                self.log.info("Try to next iteration")
                 continue
 
             if archive_id is None:
                 archive_id = self.db.add_archive(
                     fname=fdict["fname"],
                     fsize=fdict["fsize"],
-                    law_number=cfg["law_number"], folder_name=self._folder_name)
+                    law_number=self._law_number, folder_name=self._folder_name)
 
             fdict["id"] = archive_id
             if self._handle_archive(fdict) is False:
                 error_count += 1
-            elif archive_has_updated:
-                # TODO: здесь нужно обновить size архива
+            elif need_to_touch_archive:
+                self.db.touch_archive(archive_id)
+            elif need_to_update_archive_size:
                 self.db.update_archive_size(archive_id, fdict["fsize"])
 
-            if need_limit and count >= limit:
+            if has_limit and count >= limit:
                 break
 
-        self.log.info(f"Total were handled: {count} archive(s)")
-        self.log.info(f"Total were obtained {error_count} errors")
+        return count, error_count
+
+    def _download(self, finfo: dict) -> bool:
+        try:
+            self._client.download(finfo["full_name"], finfo["fname"])
+        except Exception as e:
+            # TODO: here we should catch exception "time is over" and reconnect to server
+            self.log.error(f"Error to download archive: {e}")
+            self.log.info("Try to next iteration")
+            return False
+
+        return True
+
+    def _get_limit(self):
+        limit = conf("app.limit_archives")
+        has_limit = limit != 0
+        if not has_limit:
+            limit = None
+
+        return has_limit, limit
+
+    def _skip_archive_by_region_filter(self, region) -> bool:
+        f = conf("app.filters")
+
+        if f.has_region_filter:
+            if f.filter_region(region) and f.is_positive_region_match:
+                return False
+            elif not f.filter_region(region) and f.is_negative_region_match:
+                return False
+            else:
+                self.log.info(f"Skip region {region} due to region filter")
+                self._client.set_region_skipped(region)
+                return True
+
+        return False
+
+    def _skip_archive_by_date_filter(self, archive_name: str) -> bool:
+        f = conf("app.filters")
+
+        if f.has_date_filter:
+            date, error = get_archive_date(archive_name)
+            if error is not None:
+                self.log.error(f"Got error during parse name of archive: {error}")
+                return False
+
+            if f.filter_date(date) and f.is_positive_date_match:
+                return False
+            elif not f.filter_date(date) and f.is_negative_date_match:
+                return False
+            else:
+                self.log.info(f"Skip the archive {archive_name} due to date filter")
+                return True
+
+        return False
 
 
 def run():

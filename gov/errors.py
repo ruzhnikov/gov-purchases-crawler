@@ -47,3 +47,21 @@ class LostConfigError(Error):
 
     def __init__(self, message):
         self.message = message
+
+
+class UnknownFilterMatchError(Error):
+    def __init__(self, message):
+        self.message = message
+        # self.message = f"Wrong operator {operator}"
+        # if available_operators is not None:
+        #     self.message += f"; Available operators are {available_operators}"
+
+
+class WrongFilterFormatError(Error):
+    def __init__(self, message):
+        self.message = message
+
+
+class WrongFilterFieldError(Error):
+    def __init__(self, message):
+        self.message = message
