@@ -226,7 +226,7 @@ class _Application():
             elif not f.filter_region(region) and f.is_negative_region_match:
                 return False
             else:
-                self.log.info(f"Skip this region {region} due to region filter")
+                self.log.info(f"Skip region {region} due to region filter")
                 self._client.set_region_skipped(region)
                 return True
 
@@ -240,8 +240,6 @@ class _Application():
             if error is not None:
                 self.log.error(f"Got error during parse name of archive: {error}")
                 return False
-
-            self.log.info(f"Date from file is {date}")
 
             if f.filter_date(date) and f.is_positive_date_match:
                 return False
