@@ -12,9 +12,16 @@ from .errors import UnknownFilterMatchError, WrongFilterFormatError, WrongFilter
 
 
 def _op_like(a, b, ignore_case=False):
-    pattern = r".*" + re.escape(b) + r".*"
-    flags = re.IGNORECASE if ignore_case else 0
-    return re.search(pattern, a, flags) is not None
+    key = f"like_{b}"
+    if ignore_case:
+        key += "_ignore_case"
+    pattern = _COMPILED_MATCHES.get(key)
+    if pattern is None:
+        flags = re.IGNORECASE if ignore_case else 0
+        pattern = re.compile(r".*" + re.escape(b) + r".*", flags)
+        _COMPILED_MATCHES[key] = pattern
+
+    return pattern.match(a) is not None
 
 
 def _op_not_like(a, b, ignore_case=False):
@@ -22,15 +29,29 @@ def _op_not_like(a, b, ignore_case=False):
 
 
 def _op_begin(a, b, ignore_case=False):
-    pattern = re.escape(b) + r".*"
-    flags = re.IGNORECASE if ignore_case else 0
-    return re.search(pattern, a, flags) is not None
+    key = f"begin_{b}"
+    if ignore_case:
+        key += "_ignore_case"
+    pattern = _COMPILED_MATCHES.get(key)
+    if pattern is None:
+        flags = re.IGNORECASE if ignore_case else 0
+        pattern = re.compile(r"^" + re.escape(b) + r".*", flags)
+        _COMPILED_MATCHES[key] = pattern
+
+    return pattern.match(a) is not None
 
 
 def _op_end(a, b, ignore_case=False):
-    pattern = r".*" + re.escape(b)
-    flags = re.IGNORECASE if ignore_case else 0
-    return re.search(pattern, a, flags) is not None
+    key = f"end_{b}"
+    if ignore_case:
+        key += "_ignore_case"
+    pattern = _COMPILED_MATCHES.get(key)
+    if pattern is None:
+        flags = re.IGNORECASE if ignore_case else 0
+        pattern = re.compile(r".*" + re.escape(b) + r"$", flags)
+        _COMPILED_MATCHES[key] = pattern
+
+    return pattern.match(a) is not None
 
 
 def _op_in(a, b: list, ignore_case=False):
@@ -134,6 +155,7 @@ _NEGATIVE_MATCHES = frozenset(("!=", "not like", "not between", "not in"))
 _POSITIVE_MATCHES = set(_OPERATORS.keys()) ^ _NEGATIVE_MATCHES
 _DEFAULT_MATCH = "=="
 _FILTERS = {}
+_COMPILED_MATCHES = {}
 _MANDATORY_FILTER_FIELDS = frozenset(("field", "value"))
 
 
