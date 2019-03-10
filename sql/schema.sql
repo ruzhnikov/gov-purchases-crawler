@@ -144,7 +144,8 @@ INSERT INTO forty_fourth_law.tags_to_fields_dict VALUES
     ('commissionInfo', 'commission_info'),
     ('afterProlongation', 'after_prolongation'),
     ('revisionRequisitesPO2018', 'revision_requisites_po2018'),
-    ('foundationDocInfo', 'foundation_doc_info');
+    ('foundationDocInfo', 'foundation_doc_info'),
+    ('notificationAttachments', 'notification_attachments');
 
 DROP TABLE IF EXISTS forty_fourth_law.notifications_often_tags CASCADE;
 CREATE TABLE forty_fourth_law.notifications_often_tags (
@@ -246,7 +247,8 @@ CREATE TABLE forty_fourth_law.notifications_rare_tags (
     purchase_objects JSONB,
     restrict_info VARCHAR(20),
     documentation JSONB,
-    prolongation_info JSONB
+    prolongation_info JSONB,
+    notification_attachments JSONB
 );
 
 DROP TABLE IF EXISTS forty_fourth_law.notifications_unknown_tags CASCADE;
