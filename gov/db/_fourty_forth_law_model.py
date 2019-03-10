@@ -7,7 +7,6 @@ from .base import Base
 from .models import ArchiveFile
 
 
-
 class FFLNotificationOftenTags(Base):
     """Table `forty_fourth_law.notifications_often_tags`"""
 
@@ -117,6 +116,7 @@ class FFLNotificationRareTags(Base):
     restrict_info = sa.Column(sa.String(20), nullable=True)
     documentation = sa.Column(JSONB, nullable=True)
     prolongation_info = sa.Column(JSONB, nullable=True)
+    notification_attachments = sa.Column(JSONB)
 
 
 class FFLNotificationsUnknownTags(Base):
