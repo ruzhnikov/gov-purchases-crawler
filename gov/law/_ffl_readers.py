@@ -122,6 +122,7 @@ class _FortyFourthLawBase():
         elif has_wrong_files:
             self.log.warning(
                 f"One or more file(s) of archive {archive_id} weren't parsed. Archive is not marked as parsed")
+            self.db.update_archive(archive_id, reason="one or more file(s) of archive weren't parsed")
             return False
         else:
             self.db.mark_archive_as_parsed(archive_id)

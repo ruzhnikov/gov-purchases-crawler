@@ -120,31 +120,22 @@ class DBClient():
 
         return archive_id
 
-    def mark_archive_as_parsed(self, archive_id: int):
+    def mark_archive_as_parsed(self, archive_id: int, reason="OK"):
         self.log.debug(f"Mark archive with ID {archive_id} as parsed")
         sess = self.session()
 
         archive = sess.query(models.Archive).filter_by(id=archive_id).first()
         archive.has_parsed = True
         archive.parsed_on = dt.utcnow()
+        archive.reason = reason
         sess.commit()
         sess.close()
 
-    def update_archive_size(self, archive_id: int, new_size: int):
+    def update_archive(self, archive_id: int, **kwargs):
         sess = self.session()
         sess.query(
             models.Archive).filter_by(
-            id=archive_id).update(
-            {"size": new_size, "updated_on": dt.utcnow()})
-        sess.commit()
-        sess.close()
-
-    def touch_archive(self, archive_id: int):
-        sess = self.session()
-        sess.query(
-            models.Archive).filter_by(
-            id=archive_id).update(
-            {"updated_on": dt.utcnow()})
+            id=archive_id).update(kwargs)
         sess.commit()
         sess.close()
 

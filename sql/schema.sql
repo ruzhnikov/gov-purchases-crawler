@@ -10,7 +10,8 @@ CREATE TABLE archives (
     updated_on TIMESTAMP WITHOUT TIME ZONE DEFAULT NULL,
     has_parsed boolean NOT NULL DEFAULT FALSE,
     law_number law NOT NULL DEFAULT '44',
-    folder_name VARCHAR(100)
+    folder_name VARCHAR(100),
+    reason VARCHAR(250) DEFAULT 'OK'
 );
 
 DROP TABLE IF EXISTS archive_files CASCADE;
