@@ -3,6 +3,7 @@
 
 import os
 import signal
+from datetime import datetime as dt
 from .log import get_logger
 from .purchases import Client
 from .db import DBClient
@@ -189,9 +190,18 @@ class _Application():
             if self._handle_archive(fdict) is False:
                 error_count += 1
             elif need_to_touch_archive:
-                self.db.touch_archive(archive_id)
+                self.db.update_archive(
+                    archive_id,
+                    reason="Archive was upload early, but not parsed",
+                    updated_on=dt.utcnow()
+                )
             elif need_to_update_archive_size:
-                self.db.update_archive_size(archive_id, fdict["fsize"])
+                self.db.update_archive(
+                    archive_id,
+                    size=fdict["fsize"],
+                    updated_on=dt.utcnow(),
+                    reason="Archive was upload and parsed early, but current size of file is different"
+                )
 
             if has_limit and count >= limit:
                 break

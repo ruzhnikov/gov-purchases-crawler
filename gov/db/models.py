@@ -24,6 +24,7 @@ class Archive(Base):
     has_parsed = sa.Column(sa.Boolean, nullable=False, default=False)
     law_number = sa.Column(ENUM("44", "223", name="law"), nullable=False, default="44")
     folder_name = sa.Column(sa.String(100), nullable=False)
+    reason = sa.Column(sa.String(250), nullable=True)
 
 
 class ArchiveFile(Base):
