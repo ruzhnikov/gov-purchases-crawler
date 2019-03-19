@@ -6,7 +6,7 @@
 
 Russian version is available by [link](README_ru.md)
 
-Parser of resource [ftp.zakupki.gov.ru](ftp://ftp.zakupki.gov.ru/fcs_regions)
+Parser of FTP resource [ftp.zakupki.gov.ru](ftp://ftp.zakupki.gov.ru/fcs_regions)
 
 <!-- .... -->
 

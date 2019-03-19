@@ -6,9 +6,10 @@
 
 English version is available by [link](README_en.md)
 
-Парсер ресурса [ftp.zakupki.gov.ru](ftp://ftp.zakupki.gov.ru/fcs_regions)
+Парсер FTP ресурса [ftp.zakupki.gov.ru](ftp://ftp.zakupki.gov.ru/fcs_regions)
 
-<!-- ..... -->
+Позволяет загружать и сохранять локально в БД данные по гос. закупкам. Поддерживается работа с СУБД PostgreSQL.
+<!-- ... -->
 
 ## INSTALL
 
