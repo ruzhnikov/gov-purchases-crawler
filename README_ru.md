@@ -15,7 +15,7 @@ English version is available by [link](README_en.md)
 
 ### Requirements
 
-* Python 3.6 or above
+* Python 3.6 или выше
 * PostgreSQL
 
 ### Get source code and install
