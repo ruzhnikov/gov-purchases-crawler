@@ -14,6 +14,8 @@ from .util import get_archive_date
 
 _ARCHIVE_EXISTS_BUT_NOT_PARSED = 1
 _ARCHIVE_EXISTS_BUT_SIZE_DIFFERENT = 2
+_NOTIFICATIONS_FOLDER = "notifications"
+_PROTOCOLS_FOLDER = "protocols"
 
 
 class _GracefulKiller():
@@ -32,6 +34,7 @@ class _GracefulKiller():
 
 
 class _Application():
+    """The main application class"""
 
     def __init__(self):
         self.log = get_logger(__name__)
@@ -45,21 +48,25 @@ class _Application():
 
         self.killer = _GracefulKiller()
         self._ffl = FFLReaders(self.killer)
-        self._ffl_reader = self._ffl.notifications if self._folder_name == "notifications" else self._ffl.protocols
+        if self._folder_name == _NOTIFICATIONS_FOLDER:
+            self._ffl_reader = self._ffl.notifications
+        else:
+            self._ffl_reader = self._ffl.protocols
 
     def _has_archive(self, finfo: dict) -> bool:
-        """Проверяет, нет ли у нас уже информации об этом архиве.
+        """Checking, is there already information about this archive or no.
 
         Args:
-            finfo (dict): Словарь с данными об архиве.
+            finfo (dict): A dict with archive data.
 
         Returns:
-            bool: Результат проверки.
+            bool: Result of checking.
         """
 
-        # Смотрим, что у нас в БД по этому файлу. Может быть ситуация, что файл в БД имеется и он
-        # был прочитан и распарсен, но метаданные между ним и файлом с FTP сервера отличаются.
-        # В таком случае нам нужно обновить данные в БД.
+        # Look, what is there in DB about this file.
+        # There can be situation, when an information about the file there is in DB and
+        # this file was read and parsed, but metadata between this file and file from FTP are different.
+        # In this case we should update data in DB.
         arch_status = self.db.get_archive_status(finfo["fname"], finfo["fsize"])
 
         if arch_status == self.db.FILE_STATUS["FILE_DOES_NOT_EXIST"]:
@@ -76,18 +83,7 @@ class _Application():
         return False
 
     def _need_to_update_archive(self, finfo: dict) -> bool:
-        """Проверяет, нужно ли нам обновить информацию об архиве.
-
-        Args:
-            finfo (dict): Словарь с данными об архиве.
-
-        Returns:
-            bool: Результат проверки.
-        """
-        if finfo["full_name"] not in self._archives:
-            return False
-
-        return True
+        return finfo["full_name"] in self._archives
 
     def _need_to_clean_old_files(self, finfo: dict) -> bool:
         key = finfo["full_name"]
@@ -124,7 +120,7 @@ class _Application():
         return read_archive_result
 
     def run(self):
-        """General method. Running, read and handle archives"""
+        """General method. Downloads, reads and handles archives"""
 
         self._client = Client(
             conf("app.ftp_server"),

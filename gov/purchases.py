@@ -10,12 +10,12 @@ _FTP_LOGIN = "free"
 _FTP_PASSWORD = "free"
 _FTP_ROOT_DIR = "/fcs_regions"
 
-# папка в директории региона. Из этой папки будем выкачивать данные
+# a folder in a region directory. A region data will be downloaded from this folder.
 _DEFAULT_LOOK_FOLDER = "notifications"
 
 
 class Client():
-    """Класс для работы с FTP сервером"""
+    """Class for working with FTP server"""
 
     def __init__(self, server_address, download_dir=None, looking_folder=_DEFAULT_LOOK_FOLDER):
         self._server = server_address
@@ -28,14 +28,14 @@ class Client():
         self._connect()
 
     def _connect(self):
-        """Подключение и авторизация на FTP сервере"""
+        """Connect and auth on the FTP server"""
 
         self.ftp = FTP(self._server)
         self.ftp.login(_FTP_LOGIN, _FTP_PASSWORD)
         self._is_connected = True
 
     def reconnect(self):
-        """Попытка переподключиться к серверу"""
+        """Trying to reconnect to the server"""
 
         self._is_connected = False
         self._connect()

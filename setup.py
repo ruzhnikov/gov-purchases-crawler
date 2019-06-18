@@ -16,6 +16,7 @@ setup(
     setup_requires=['pytest-runner'],
     tests_require=["pytest"],
     description="Crawler of resources from ftp.zakupki.gov.ru",
+    url='https://github.com/ruzhnikov/gov-purchases-crawler',
     entry_points={
         "console_scripts": [
             "gov-purchases=gov.app:run"

@@ -185,7 +185,7 @@ def conf(key=None):
     If value for key was not found, `None` will be returned.
     """
 
-    if len(_cached_config) == 0:
+    if not _cached_config:
         _load_conf()
 
     if key is None:
