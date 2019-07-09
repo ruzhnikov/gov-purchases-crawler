@@ -8,14 +8,14 @@ class Error(Exception):
 
 
 class WrongReaderLawError(Error):
-    """Передан некорректный номер закона
+    """A wrong law number has been got.
 
     Args:
-        law (int): Номер закона.
+        law (int): Law number.
 
     Attributes:
-        message (str): Сообщение об ошибке.
-        law (int): Номер закона.
+        message (str): Error message.
+        law (int): Law number.
     """
 
     def __init__(self, law):
@@ -24,11 +24,11 @@ class WrongReaderLawError(Error):
 
 
 class EmptyDownloadDirError(Error):
-    """Отсутствует папка для скачивания файла.
-    Папка не была задана при создании объекта и не была передана при вызове метода.
+    """There is no a folder for downloading files.
+    The folder was not be set during create an object and wasn't obtained in a method call.
 
     Attributes:
-        message (str): Сообщение об ошибке.
+        message (str): Error message.
     """
 
     def __init__(self):
@@ -52,9 +52,6 @@ class LostConfigError(Error):
 class UnknownFilterMatchError(Error):
     def __init__(self, message):
         self.message = message
-        # self.message = f"Wrong operator {operator}"
-        # if available_operators is not None:
-        #     self.message += f"; Available operators are {available_operators}"
 
 
 class WrongFilterFormatError(Error):
@@ -63,5 +60,10 @@ class WrongFilterFormatError(Error):
 
 
 class WrongFilterFieldError(Error):
+    def __init__(self, message):
+        self.message = message
+
+
+class EmptyValue(Error):
     def __init__(self, message):
         self.message = message
