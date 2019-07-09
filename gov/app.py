@@ -58,7 +58,7 @@ class _Application():
 
     def _check_tmp_folder(self):
         tmp_folder: str = conf("app.tmp_folder")
-        if tmp_folder is None:
+        if not tmp_folder:
             raise EmptyValue("The value of 'tmp_folder' in config cannot be empty")
         elif not os.path.exists(tmp_folder):
             raise FileNotFoundError(tmp_folder)
