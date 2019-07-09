@@ -10,6 +10,7 @@ from .db import DBClient
 from .law.readers import FFLReaders
 from .config import conf
 from .util import get_archive_date
+from .errors import EmptyValue
 
 
 _ARCHIVE_EXISTS_BUT_NOT_PARSED = 1
@@ -42,6 +43,8 @@ class _Application():
         self._archives = {}
         self._client = None
 
+        self._check_tmp_folder()
+
         self._folder_name = conf("app.server_folder_name")
         self._law_number = conf("app.law_number")
         self.log.info(f"Server folder name is '{self._folder_name}'")
@@ -52,6 +55,13 @@ class _Application():
             self._ffl_reader = self._ffl.notifications
         else:
             self._ffl_reader = self._ffl.protocols
+
+    def _check_tmp_folder(self):
+        tmp_folder: str = conf("app.tmp_folder")
+        if not tmp_folder:
+            raise EmptyValue("The value of 'tmp_folder' in config cannot be empty")
+        elif not os.path.exists(tmp_folder):
+            raise FileNotFoundError(tmp_folder)
 
     def _has_archive(self, finfo: dict) -> bool:
         """Checking, is there already information about this archive or no.

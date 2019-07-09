@@ -51,7 +51,7 @@ def _load_conf():
 
     global _cached_config
     with open(cfg_file, "rt") as f:
-        _cached_config = yaml.load(f)
+        _cached_config = yaml.load(f, Loader=yaml.BaseLoader)
 
     _fill_extra_pros(args)
 
