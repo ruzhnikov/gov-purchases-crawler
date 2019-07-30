@@ -1,5 +1,6 @@
 CREATE TYPE law AS ENUM ('44', '223');
 
+-- the main table for storing archives
 DROP TABLE IF EXISTS archives CASCADE;
 CREATE TABLE archives (
     id SERIAL PRIMARY KEY,
@@ -14,6 +15,7 @@ CREATE TABLE archives (
     reason VARCHAR(250) DEFAULT 'OK'
 );
 
+-- table for storing files of archive
 DROP TABLE IF EXISTS archive_files CASCADE;
 CREATE TABLE archive_files (
     id SERIAL PRIMARY KEY,
@@ -29,6 +31,23 @@ CREATE TABLE archive_files (
 DROP SCHEMA IF EXISTS forty_fourth_law CASCADE;
 CREATE SCHEMA forty_fourth_law;
 
+-- a table for storing file's data of notifications in JSONB format
+DROP TABLE IF EXISTS forty_fourth_law.notifications_data;
+CREATE TABLE forty_fourth_law.notifications_data (
+    id SERIAL PRIMARY KEY,
+    archive_file_id INT REFERENCES archive_files (id) ON DELETE CASCADE,
+    data JSONB
+);
+
+-- a table for storing file's data of protocols in JSONB format
+DROP TABLE IF EXISTS forty_fourth_law.protocols_data;
+CREATE TABLE forty_fourth_law.protocols_data (
+    id SERIAL PRIMARY KEY,
+    archive_file_id INT REFERENCES archive_files (id) ON DELETE CASCADE,
+    data JSONB
+);
+
+-- a dictionary with XML tags as keys and DB fields as values
 DROP TABLE IF EXISTS forty_fourth_law.tags_to_fields_dict CASCADE;
 CREATE TABLE forty_fourth_law.tags_to_fields_dict (
     tag varchar(100),
