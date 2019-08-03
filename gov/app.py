@@ -4,17 +4,21 @@
 import os
 import signal
 from datetime import datetime as dt
+from enum import Enum
 from .log import get_logger
 from .purchases import Client
-from .db import DBClient
+from .db import DBClient, FileStatus as DBFileStatus
 from .law.readers import FFLReaders
 from .config import conf
 from .util import get_archive_date
-from .errors import EmptyValue
+from .errors import EmptyValueError
 
 
-_ARCHIVE_EXISTS_BUT_NOT_PARSED = 1
-_ARCHIVE_EXISTS_BUT_SIZE_DIFFERENT = 2
+class _ArchiveStatus(Enum):
+    ARCHIVE_EXISTS_BUT_NOT_PARSED = 1
+    ARCHIVE_EXISTS_BUT_SIZE_DIFFERENT = 2
+
+
 _NOTIFICATIONS_FOLDER = "notifications"
 _PROTOCOLS_FOLDER = "protocols"
 
@@ -59,7 +63,7 @@ class _Application():
     def _check_tmp_folder(self):
         tmp_folder: str = conf("app.tmp_folder")
         if not tmp_folder:
-            raise EmptyValue("The value of 'tmp_folder' in config cannot be empty")
+            raise EmptyValueError("The value of 'tmp_folder' in config cannot be empty")
         elif not os.path.exists(tmp_folder):
             raise FileNotFoundError(tmp_folder)
 
@@ -79,15 +83,17 @@ class _Application():
         # In this case we should update data in DB.
         arch_status = self.db.get_archive_status(finfo["fname"], finfo["fsize"])
 
-        if arch_status == self.db.FILE_STATUS["FILE_DOES_NOT_EXIST"]:
+        key = finfo["full_name"]
+
+        if arch_status == DBFileStatus.FILE_DOES_NOT_EXIST:
             return False
-        elif arch_status == self.db.FILE_STATUS["FILE_EXISTS"]:
+        elif arch_status == DBFileStatus.FILE_EXISTS:
             return True
-        elif arch_status == self.db.FILE_STATUS["FILE_EXISTS_BUT_NOT_PARSED"]:
-            self._archives[finfo["full_name"]] = _ARCHIVE_EXISTS_BUT_NOT_PARSED
+        elif arch_status == DBFileStatus.FILE_EXISTS_BUT_NOT_PARSED:
+            self._archives[key] = _ArchiveStatus.ARCHIVE_EXISTS_BUT_NOT_PARSED
             return True
-        elif arch_status == self.db.FILE_STATUS["FILE_EXISTS_BUT_SIZE_DIFFERENT"]:
-            self._archives[finfo["full_name"]] = _ARCHIVE_EXISTS_BUT_SIZE_DIFFERENT
+        elif arch_status == DBFileStatus.FILE_EXISTS_BUT_SIZE_DIFFERENT:
+            self._archives[key] = _ArchiveStatus.ARCHIVE_EXISTS_BUT_SIZE_DIFFERENT
             return True
 
         return False
@@ -97,11 +103,11 @@ class _Application():
 
     def _need_to_clean_old_files(self, finfo: dict) -> bool:
         key = finfo["full_name"]
-        return key in self._archives and self._archives[key] == _ARCHIVE_EXISTS_BUT_SIZE_DIFFERENT
+        return key in self._archives and self._archives[key] == _ArchiveStatus.ARCHIVE_EXISTS_BUT_SIZE_DIFFERENT
 
     def _archive_was_not_parsed(self, finfo: dict) -> bool:
         key = finfo["full_name"]
-        return key in self._archives and self._archives[key] == _ARCHIVE_EXISTS_BUT_NOT_PARSED
+        return key in self._archives and self._archives[key] == _ArchiveStatus.ARCHIVE_EXISTS_BUT_NOT_PARSED
 
     def _handle_archive(self, finfo: dict) -> bool:
         """Work with downloaded archive. After handling the file is removed.
