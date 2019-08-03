@@ -4,9 +4,13 @@
 from zipfile import ZipFile
 from lxml import etree
 from ..db import FortyFourthLawDB
+from ..db import FileStatus as DBFileStatus
 from ..log import get_logger
 from . import util
-from . import _REASONS, _REASON_CODES
+from ._reasons import Reason, ReasonCode, get_reason_by_code
+
+
+_DEFAULT_REASON = "OK"
 
 
 class _FortyFourthLawBase():
@@ -24,29 +28,18 @@ class _FortyFourthLawBase():
     def set_killer(self, killer):
         self.killer = killer
 
-    def _register_tags(self, db_namespace):
-        """Register tags in local storage"""
-
-        self.log.debug("Fill tag aliases")
-        self._OFTEN_TAGS = {k: v for (k, v) in self.db.get_columns_dict(db_namespace.often_tags_table)}
-        self._RARE_TAGS = {k: v for (k, v) in self.db.get_columns_dict(db_namespace.rare_tags_table)}
-        self.log.debug("Done")
-
-    def _parse_tag_data(self, elem, tags_dict: dict) -> tuple:
-        tag, elem_data = util.recursive_read_dict(elem, skip_tags=self._SKIP_TAGS, tag_handlers=self._TAG_HANDLERS)
-        return tags_dict[tag], elem_data
-
     def _has_archive_file(self, archive_id: int, fname: str, fsize: int) -> bool:
         file_status = self.db.get_archive_file_status(archive_id, fname, fsize)
-        if file_status == self.db.FILE_STATUS["FILE_DOES_NOT_EXIST"]:
+
+        if file_status == DBFileStatus.FILE_DOES_NOT_EXIST:
             return False
-        elif file_status == self.db.FILE_STATUS["FILE_EXISTS"]:
+        elif file_status == DBFileStatus.FILE_EXISTS:
             return True
-        elif file_status == self.db.FILE_STATUS["FILE_EXISTS_BUT_NOT_PARSED"]:
-            self._files[fname] = _REASON_CODES["FILE_EXISTS_BUT_NOT_PARSED"]
+        elif file_status == DBFileStatus.FILE_EXISTS_BUT_NOT_PARSED:
+            self._files[fname] = ReasonCode.FILE_EXISTS_BUT_NOT_PARSED
             return True
-        elif file_status == self.db.FILE_STATUS["FILE_EXISTS_BUT_SIZE_DIFFERENT"]:
-            self._files[fname] = _REASON_CODES["FILE_EXISTS_BUT_SIZE_DIFFERENT"]
+        elif file_status == DBFileStatus.FILE_EXISTS_BUT_SIZE_DIFFERENT:
+            self._files[fname] = ReasonCode.FILE_EXISTS_BUT_SIZE_DIFFERENT
             return True
 
         return False
@@ -67,6 +60,7 @@ class _FortyFourthLawBase():
 
         has_wrong_files = False
         has_killed = False
+        files_counter = 0
         with ZipFile(archive, "r") as zip_file:
             for entry in zip_file.infolist():
                 if self.killer.kill_now:
@@ -76,6 +70,7 @@ class _FortyFourthLawBase():
                 if not entry.filename.endswith(".xml"):
                     continue
 
+                files_counter += 1
                 fname = entry.filename
                 fsize = entry.file_size
 
@@ -99,10 +94,9 @@ class _FortyFourthLawBase():
                     file_id = file.id
                     reason_code = self._files[fname]
 
-                    # we should clean old tags of file
-                    if reason_code == _REASON_CODES["FILE_EXISTS_BUT_SIZE_DIFFERENT"]:
-                        self.db.delete_file_tags(file_id)
-                    reason = _REASONS[reason_code]
+                    if reason_code == ReasonCode.FILE_EXISTS_BUT_SIZE_DIFFERENT:
+                        self.db.delete_file_data(file_id)
+                    reason = get_reason_by_code(reason_code)
                 else:
                     file_id = self.db.add_archive_file(archive_id, fname, fsize)
 
@@ -122,8 +116,11 @@ class _FortyFourthLawBase():
         elif has_wrong_files:
             self.log.warning(
                 f"One or more file(s) of archive {archive_id} weren't parsed. Archive is not marked as parsed")
-            self.db.update_archive(archive_id, reason="one or more file(s) of archive weren't parsed")
+            self.db.update_archive(archive_id, reason="One or more file(s) of archive weren't parsed")
             return False
+        elif files_counter == 0:
+            self.log.info("There is not one XML file in the archive")
+            self.db.update_archive(archive_id, reason="Archive is empty")
         else:
             self.db.mark_archive_as_parsed(archive_id)
             return True
@@ -138,72 +135,27 @@ class _FortyFourthLawBase():
         """
 
         root = etree.fromstring(xml)
-        first_element = list(root)[0]
-        xml_type = util.get_tag(first_element)
+        root_element = list(root)[0]
+        xml_type = util.get_tag(root_element)
+        _, file_data = util.recursive_read_dict(root, skip_tags=self._SKIP_TAGS, tag_handlers=self._TAG_HANDLERS)
 
         reason = reason if reason is not None else "OK"
-        (often_data, rare_data, unknown_data) = self._read_xml_root(first_element)
 
-        if len(often_data) == 0 and len(rare_data) == 0 and len(unknown_data) == 0:
+        if len(file_data) == 0:
             self.log.warn(reason)
             self.db.mark_archive_file_as_parsed(file_id, xml_type=xml_type,
-                                                reason="There is no one knowledge or unknown tag in file")
+                                                reason="There is no valid XML data in the file")
             return
 
         # we should save all changes by one transaction.
-        session = self.db.session()
-        if len(often_data):
-            often_data["archive_file_id"] = file_id
-            data = self._db_namespace.often_tags_table(**often_data)
-            session.add(data)
-
-        if len(rare_data):
-            rare_data["archive_file_id"] = file_id
-            data = self._db_namespace.rare_tags_table(**rare_data)
-            session.add(data)
-
-        for local_data in unknown_data:
-            data = self._db_namespace.unknown_tags_table(
-                archive_file_id=file_id, name=local_data[0], value=local_data[1])
-            session.add(data)
-
+        session = self.db.get_session()
+        self._insert_data(file_id, file_data, session)
         self.db.mark_archive_file_as_parsed(file_id, xml_type, reason=reason, session=session)
         session.commit()
         session.close()
 
-    def _read_xml_root(self, first_element) -> (dict, dict, list):
-        """Read and parse XML elements that are children of root element(first_element)
-
-        Args:
-            first_element (etree._Element): Root element.
-        """
-
-        (often_data, rare_data) = ({}, {})
-        unknown_data = []
-
-        for elem in list(first_element):
-            tag_name = util.get_tag(elem.tag)
-            tags_dict = None
-            local_data_storage = None
-
-            if tag_name in self._OFTEN_TAGS:
-                tags_dict = self._OFTEN_TAGS
-                local_data_storage = often_data
-            elif tag_name in self._RARE_TAGS:
-                tags_dict = self._RARE_TAGS
-                local_data_storage = rare_data
-            else:
-                self.log.warning(f"Unknown element {tag_name}")
-                tags_dict = {tag_name: tag_name}
-                local_data_storage = unknown_data
-
-            data_key, data_value = self._parse_tag_data(elem, tags_dict)
-            if isinstance(local_data_storage, dict):
-                local_data_storage[data_key] = data_value
-            else:
-                local_data_storage.append((data_key, data_value))
-
-        return often_data, rare_data, unknown_data
+    def _insert_data(self, *args):
+        raise NotImplementedError(f"It has to be implemeted in {self.__class__.__name__}")
 
 
 class FortyFourthLawNotifications(_FortyFourthLawBase):
@@ -213,10 +165,8 @@ class FortyFourthLawNotifications(_FortyFourthLawBase):
     _TAG_HANDLERS = {}
     _SKIP_TAGS = ("cryptoSigns", "signature")
 
-    def __init__(self):
-        super().__init__()
-        self._db_namespace = self.db.notifications
-        self._register_tags(self._db_namespace)
+    def _insert_data(self, *args):
+        self.db.insert_notification_data(*args)
 
 
 class FortyFourthLawProtocols(_FortyFourthLawBase):
@@ -225,7 +175,5 @@ class FortyFourthLawProtocols(_FortyFourthLawBase):
     _TAG_HANDLERS = {}
     _SKIP_TAGS = ("cryptoSigns", "signature")
 
-    def __init__(self):
-        super().__init__()
-        self._db_namespace = self.db.protocols
-        self._register_tags(self._db_namespace)
+    def _insert_data(self, *args):
+        self.db.insert_protocol_data(*args)

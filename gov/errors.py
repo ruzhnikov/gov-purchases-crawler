@@ -64,6 +64,6 @@ class WrongFilterFieldError(Error):
         self.message = message
 
 
-class EmptyValue(Error):
+class EmptyValueError(Error):
     def __init__(self, message):
         self.message = message

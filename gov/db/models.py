@@ -6,7 +6,7 @@
 import sqlalchemy as sa
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.dialects.postgresql import ENUM
+from sqlalchemy.dialects.postgresql import ENUM, JSONB
 from .base import Base
 
 
@@ -42,3 +42,25 @@ class ArchiveFile(Base):
     reason = sa.Column(sa.String(250), nullable=True)
 
     archives = relationship("Archive")
+
+
+class FFLProtocolsData(Base):
+    """Table `forty_fourth_law.protocols_data`
+    """
+    __tablename__ = "protocols_data"
+    __table_args__ = ({"schema": "forty_fourth_law"})
+
+    id = sa.Column(sa.Integer, primary_key=True)
+    archive_file_id = sa.Column(sa.Integer, sa.ForeignKey(ArchiveFile.id))
+    data = sa.Column(JSONB, nullable=True)
+
+
+class FFLNotificationsData(Base):
+    """Table `forty_fourth_law.notifications_data`
+    """
+    __tablename__ = "notifications_data"
+    __table_args__ = ({"schema": "forty_fourth_law"})
+
+    id = sa.Column(sa.Integer, primary_key=True)
+    archive_file_id = sa.Column(sa.Integer, sa.ForeignKey(ArchiveFile.id))
+    data = sa.Column(JSONB, nullable=True)
