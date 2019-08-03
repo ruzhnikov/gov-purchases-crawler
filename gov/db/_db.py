@@ -14,6 +14,9 @@ from ..config import conf, is_production
 
 
 class FileStatus(Enum):
+    """Statuses of file from DB.
+    """
+
     FILE_EXISTS = 1
     FILE_DOES_NOT_EXIST = 2
     FILE_EXISTS_BUT_NOT_PARSED = 3
@@ -21,23 +24,39 @@ class FileStatus(Enum):
 
 
 class DBClient():
+    """A base class for working with database.
+        Other classes for working with data of difference laws, inherits from this one.
+        The class contains methods for manipulate archive and archive's file information.
+    """
+
     def __init__(self):
         self.log = get_logger(__name__)
         self._connect()
 
     def _connect(self):
+        conn_str = self._get_connection_string()
+        engine_echo = self._get_engine_echo()
+        engine = sa.create_engine(conn_str, echo=engine_echo)
+
+        self._session = sessionmaker(bind=engine)
+        self._check_connection()
+
+    def _get_connection_string(self):
         cfg = conf("db")
         conn_str = f"postgresql://{cfg['user']}:{cfg['password']}@{cfg['host']}:{cfg['port']}/{cfg['name']}"
+
+        return conn_str
+
+    def _get_engine_echo(self):
+        cfg = conf("db")
         engine_echo = not is_production()
         if cfg["echo"] is not None:
             engine_echo = cfg["echo"] == True
 
-        engine = sa.create_engine(conn_str, echo=engine_echo)
-        self.session = sessionmaker(bind=engine)
-        self._check_connection()
+        return engine_echo
 
     def _check_connection(self):
-        sess = self.session()
+        sess = self._session()
         sess.execute("SELECT TRUE")
         sess.close()
 
@@ -72,7 +91,7 @@ class DBClient():
         """
 
         self.log.debug(f"Check, is there parsed file {fname} or no")
-        sess = self.session()
+        sess = self._session()
         arch = aliased(Archive, name="arch")
         query = sess.query(arch)
 
@@ -93,7 +112,7 @@ class DBClient():
         Returns:
             models.Archive: Archive data.
         """
-        sess = self.session()
+        sess = self._session()
         query = sess.query(Archive)
 
         archive = query.filter(Archive.name == fname,
@@ -116,7 +135,7 @@ class DBClient():
         """
 
         self.log.debug(f"Add info about a new archive {fname} to database")
-        sess = self.session()
+        sess = self._session()
         archive = Archive(name=fname, size=fsize, law_number=law_number, folder_name=folder_name)
         sess.add(archive)
         sess.commit()
@@ -136,7 +155,7 @@ class DBClient():
         """
 
         self.log.debug(f"Mark archive with ID {archive_id} as parsed")
-        sess = self.session()
+        sess = self._session()
 
         archive = sess.query(Archive).filter_by(id=archive_id).first()
         archive.has_parsed = True
@@ -153,7 +172,7 @@ class DBClient():
         """
 
         self.log.debug(f"Update archive with ID {archive_id}")
-        sess = self.session()
+        sess = self._session()
         sess.query(Archive).filter_by(id=archive_id).update(kwargs)
         sess.commit()
         sess.close()
@@ -171,7 +190,7 @@ class DBClient():
         """
 
         self.log.debug(f"Add info to database about a new file {fname} inside archive")
-        sess = self.session()
+        sess = self._session()
 
         file = ArchiveFile(archive_id=archive_id, name=fname, size=fsize)
         sess.add(file)
@@ -184,7 +203,7 @@ class DBClient():
 
     def get_archive_file_status(self, archive_id: int, fname: str, fsize: int) -> FileStatus:
         self.log.debug(f"Check, is there parsed file {fname} or no")
-        sess = self.session()
+        sess = self._session()
         query = sess.query(ArchiveFile)
         file = query.filter(ArchiveFile.name == fname,
                             ArchiveFile.archive_id == archive_id,
@@ -194,7 +213,7 @@ class DBClient():
         return self._compare_fdata_and_return(file, fsize)
 
     def get_archive_file(self, archive_id: int, fname: str, fsize: int) -> ArchiveFile:
-        sess = self.session()
+        sess = self._session()
         query = sess.query(ArchiveFile)
         file = query.filter(ArchiveFile.name == fname,
                             ArchiveFile.archive_id == archive_id,
@@ -212,7 +231,7 @@ class DBClient():
             session (sessionmarket, optional): DB session. Defaults to None.
             reason (str, optional): Reason of parsed file. Defaults to None.
         """
-        sess = session if session is not None else self.session()
+        sess = session if session is not None else self._session()
         file = sess.query(ArchiveFile).filter_by(id=file_id).first()
         file.has_parsed = True
         file.parsed_on = dt.utcnow()
@@ -228,7 +247,10 @@ class DBClient():
         Args:
             archive_id (int): Archive ID.
         """
-        sess = self.session()
+        sess = self._session()
         sess.query(ArchiveFile).filter(ArchiveFile.archive_id == archive_id).delete()
         sess.commit()
         sess.close()
+
+    def get_session(self):
+        return self._session()
