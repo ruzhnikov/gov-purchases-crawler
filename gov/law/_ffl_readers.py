@@ -120,6 +120,8 @@ class _FortyFourthLawBase():
         elif files_counter == 0:
             self.log.info("There is not one XML file in the archive")
             self.db.update_archive(archive_id, reason="Archive is empty")
+            self.db.mark_archive_as_parsed(archive_id)
+            return True
         else:
             self.db.mark_archive_as_parsed(archive_id)
             return True
