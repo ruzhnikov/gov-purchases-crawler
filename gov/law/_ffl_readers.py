@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 from zipfile import ZipFile
-from lxml import etree
 from ..db import FortyFourthLawDB
 from ..db import FileStatus as DBFileStatus
 from ..log import get_logger
@@ -134,11 +133,7 @@ class _FortyFourthLawBase():
             reason (str, optional): Defaults to None. Field 'reason' for saving in DB.
         """
 
-        root = etree.fromstring(xml)
-        root_element = list(root)[0]
-        xml_type = util.get_tag(root_element)
-        _, file_data = util.recursive_read_dict(root, skip_tags=self._SKIP_TAGS, tag_handlers=self._TAG_HANDLERS)
-
+        xml_type, file_data = util.get_xml_data(xml, self._SKIP_TAGS, self._TAG_HANDLERS)
         reason = reason if reason is not None else "OK"
 
         if len(file_data) == 0:

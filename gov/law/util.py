@@ -76,3 +76,23 @@ def recursive_read_dict(element, skip_tags=(), tag_handlers={}):
         element_data = local_dict
 
     return tag, element_data
+
+
+def get_xml_data(raw_xml: bytes, skip_tags=(), tag_handlers={}):
+    """Read XML data, convert it to needle format and return these data.
+
+    Args:
+        raw_xml (bytes): Raw XML data in bytes.
+        skip_tags (tuple, optional): Tags of XML that should be skipped. Defaults to ().
+        tag_handlers (dict, optional): Special handlers for XML tags. Defaults to {}.
+
+    Returns:
+        tuple(str, dict): Name of root XML element and parsed XML data as dictionary.
+    """
+    root = etree.fromstring(raw_xml)
+    root_element = list(root)[0]
+    xml_type = get_tag(root_element)
+
+    _, file_data = recursive_read_dict(root, skip_tags, tag_handlers)
+
+    return xml_type, file_data
