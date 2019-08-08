@@ -26,10 +26,11 @@ class Client():
         self._server = server_address
         self._server_folder = server_folder
         self._log = logger
-        self._is_connected = False
         self._regions = []
         self._skipped_region = None
         self._download_dir = None
+        self._is_connected = False
+        self._connect()
 
     def _connect(self):
         """Connect and auth on the FTP server"""
@@ -40,9 +41,15 @@ class Client():
         self._is_connected = True
         self._log.debug("Successfully")
 
-    def set_download_dir(self, download_dir: str):
-        self._log.debug(f"Set directory {download_dir} as folder for downloading archives")
-        self._download_dir = download_dir
+    def set_download_dir(self, new_dir: str):
+        """Set local folder for doanloading files for the client.s
+
+        Args:
+            new_dir (str): Folder name.
+        """
+
+        self._log.debug(f"Set directory {new_dir} as folder for downloading archives")
+        self._download_dir = new_dir
 
     def reconnect(self):
         pass
@@ -78,7 +85,8 @@ class Client():
         path_to_download = download_dir + "/" + fname
         self._ftp.retrbinary(f"RETR {fpath}", open(path_to_download, "wb").write)
 
-    def get_regions(self):
+    @property
+    def regions(self):
         """Get regions list.
 
         Returns:
